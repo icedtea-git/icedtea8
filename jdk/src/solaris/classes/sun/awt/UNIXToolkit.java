@@ -30,6 +30,7 @@ import java.awt.color.ColorSpace;
 import java.awt.image.*;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+
 import sun.security.action.GetIntegerAction;
 import com.sun.java.swing.plaf.gtk.GTKConstants.TextDirection;
 import sun.java2d.opengl.OGLRenderQueue;

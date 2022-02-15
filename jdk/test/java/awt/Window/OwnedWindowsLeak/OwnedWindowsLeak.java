@@ -23,6 +23,7 @@
 
 /*
   @test
+  @key headful
   @bug 6758673
   @summary Tests that windows are removed from owner's child windows list
   @author art: area=awt.toplevel

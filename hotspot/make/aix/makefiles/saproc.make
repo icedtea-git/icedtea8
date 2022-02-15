@@ -88,6 +88,7 @@ $(LIBSAPROC): $(SASRCFILES) $(SAMAPFILE)
 	           -o $@                                                \
 	           -lthread_db
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
   # AIX produces .debuginfo from copy of -g compiled object prior to strip
 	$(QUIETLY) $(CP) $@ $(LIBJSIG_DEBUGINFO)
 #  ifeq ($(STRIP_POLICY),all_strip)
@@ -98,9 +99,12 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
 #    # implied else here is no stripping at all
 #    endif
 #  endif
+  endif
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
+    ifneq ($(STRIP_POLICY),no_strip)
 	$(ZIPEXE) -q -y $(LIBSAPROC_DIZ) $(LIBSAPROC_DEBUGINFO)
 	$(RM) $(LIBSAPROC_DEBUGINFO)
+    endif
   endif
 endif
 

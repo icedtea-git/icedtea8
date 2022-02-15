@@ -22,11 +22,10 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#include <windows.h>
-#include <winsock2.h>
-#include "jni.h"
 #include "net_util.h"
+
 #include "java_net_DualStackPlainSocketImpl.h"
+#include "java_net_SocketOptions.h"
 
 #define SET_BLOCKING 0
 #define SET_NONBLOCKING 1
@@ -100,7 +99,7 @@ JNIEXPORT void JNICALL Java_java_net_DualStackPlainSocketImpl_bind0
     rv = NET_WinBind(fd, (struct sockaddr *)&sa, sa_len, exclBind);
 
     if (rv == SOCKET_ERROR)
-        NET_ThrowNew(env, WSAGetLastError(), "JVM_Bind");
+        NET_ThrowNew(env, WSAGetLastError(), "NET_Bind");
 }
 
 /*
@@ -455,10 +454,8 @@ JNIEXPORT void JNICALL Java_java_net_DualStackPlainSocketImpl_sendOOB
     unsigned char d = (unsigned char) data & 0xff;
 
     n = send(fd, (char *)&data, 1, MSG_OOB);
-    if (n == JVM_IO_ERR) {
+    if (n == SOCKET_ERROR) {
         NET_ThrowNew(env, WSAGetLastError(), "send");
-    } else if (n == JVM_IO_INTR) {
-        JNU_ThrowByName(env, "java/io/InterruptedIOException", 0);
     }
 }
 

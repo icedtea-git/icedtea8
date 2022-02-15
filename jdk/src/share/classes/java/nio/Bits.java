@@ -567,31 +567,12 @@ class Bits {                            // package-private
 
     // -- Processor and memory-system properties --
 
-    private static final ByteOrder byteOrder;
+    private static final ByteOrder byteOrder
+        = unsafe.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN;
 
     static ByteOrder byteOrder() {
-        if (byteOrder == null)
-            throw new Error("Unknown byte order");
         return byteOrder;
     }
-
-    static {
-        long a = unsafe.allocateMemory(8);
-        try {
-            unsafe.putLong(a, 0x0102030405060708L);
-            byte b = unsafe.getByte(a);
-            switch (b) {
-            case 0x01: byteOrder = ByteOrder.BIG_ENDIAN;     break;
-            case 0x08: byteOrder = ByteOrder.LITTLE_ENDIAN;  break;
-            default:
-                assert false;
-                byteOrder = null;
-            }
-        } finally {
-            unsafe.freeMemory(a);
-        }
-    }
-
 
     private static int pageSize = -1;
 
@@ -605,19 +586,9 @@ class Bits {                            // package-private
         return (int)(size + (long)pageSize() - 1L) / pageSize();
     }
 
-    private static boolean unaligned;
-    private static boolean unalignedKnown = false;
+    private static boolean unaligned = unsafe.unalignedAccess();
 
     static boolean unaligned() {
-        if (unalignedKnown)
-            return unaligned;
-        String arch = AccessController.doPrivileged(
-            new sun.security.action.GetPropertyAction("os.arch"));
-        unaligned = arch.equals("i386") || arch.equals("x86")
-            || arch.equals("amd64") || arch.equals("x86_64")
-            || arch.equals("ppc64") || arch.equals("ppc64le")
-            || arch.equals("aarch64");
-        unalignedKnown = true;
         return unaligned;
     }
 
@@ -849,7 +820,7 @@ class Bits {                            // package-private
      *        number of bytes to copy
      */
     static void copyFromCharArray(Object src, long srcPos, long dstAddr, long length) {
-        copySwapMemory(src, unsafe.arrayBaseOffset(src.getClass()) + srcPos, null, dstAddr, length, 2);
+        unsafe.copySwapMemory(src, unsafe.arrayBaseOffset(src.getClass()) + srcPos, null, dstAddr, length, 2);
     }
 
     /**
@@ -865,7 +836,7 @@ class Bits {                            // package-private
      *        number of bytes to copy
      */
     static void copyToCharArray(long srcAddr, Object dst, long dstPos, long length) {
-        copySwapMemory(null, srcAddr, dst, unsafe.arrayBaseOffset(dst.getClass()) + dstPos, length, 2);
+        unsafe.copySwapMemory(null, srcAddr, dst, unsafe.arrayBaseOffset(dst.getClass()) + dstPos, length, 2);
     }
 
     /**
@@ -881,7 +852,7 @@ class Bits {                            // package-private
      *        number of bytes to copy
      */
     static void copyFromShortArray(Object src, long srcPos, long dstAddr, long length) {
-        copySwapMemory(src, unsafe.arrayBaseOffset(src.getClass()) + srcPos, null, dstAddr, length, 2);
+        unsafe.copySwapMemory(src, unsafe.arrayBaseOffset(src.getClass()) + srcPos, null, dstAddr, length, 2);
     }
 
     /**
@@ -897,7 +868,7 @@ class Bits {                            // package-private
      *        number of bytes to copy
      */
     static void copyToShortArray(long srcAddr, Object dst, long dstPos, long length) {
-        copySwapMemory(null, srcAddr, dst, unsafe.arrayBaseOffset(dst.getClass()) + dstPos, length, 2);
+        unsafe.copySwapMemory(null, srcAddr, dst, unsafe.arrayBaseOffset(dst.getClass()) + dstPos, length, 2);
     }
 
     /**
@@ -913,7 +884,7 @@ class Bits {                            // package-private
      *        number of bytes to copy
      */
     static void copyFromIntArray(Object src, long srcPos, long dstAddr, long length) {
-        copySwapMemory(src, unsafe.arrayBaseOffset(src.getClass()) + srcPos, null, dstAddr, length, 4);
+        unsafe.copySwapMemory(src, unsafe.arrayBaseOffset(src.getClass()) + srcPos, null, dstAddr, length, 4);
     }
 
     /**
@@ -929,7 +900,7 @@ class Bits {                            // package-private
      *        number of bytes to copy
      */
     static void copyToIntArray(long srcAddr, Object dst, long dstPos, long length) {
-        copySwapMemory(null, srcAddr, dst, unsafe.arrayBaseOffset(dst.getClass()) + dstPos, length, 4);
+        unsafe.copySwapMemory(null, srcAddr, dst, unsafe.arrayBaseOffset(dst.getClass()) + dstPos, length, 4);
     }
 
     /**
@@ -945,7 +916,7 @@ class Bits {                            // package-private
      *        number of bytes to copy
      */
     static void copyFromLongArray(Object src, long srcPos, long dstAddr, long length) {
-        copySwapMemory(src, unsafe.arrayBaseOffset(src.getClass()) + srcPos, null, dstAddr, length, 8);
+        unsafe.copySwapMemory(src, unsafe.arrayBaseOffset(src.getClass()) + srcPos, null, dstAddr, length, 8);
     }
 
     /**
@@ -961,66 +932,6 @@ class Bits {                            // package-private
      *        number of bytes to copy
      */
     static void copyToLongArray(long srcAddr, Object dst, long dstPos, long length) {
-        copySwapMemory(null, srcAddr, dst, unsafe.arrayBaseOffset(dst.getClass()) + dstPos, length, 8);
+        unsafe.copySwapMemory(null, srcAddr, dst, unsafe.arrayBaseOffset(dst.getClass()) + dstPos, length, 8);
     }
-
-    private static boolean isPrimitiveArray(Class<?> c) {
-        Class<?> componentType = c.getComponentType();
-        return componentType != null && componentType.isPrimitive();
-    }
-
-    private native static void copySwapMemory0(Object srcBase, long srcOffset,
-                                        Object destBase, long destOffset,
-                                        long bytes, long elemSize);
-
-    /**
-     * Copies all elements from one block of memory to another block,
-     * *unconditionally* byte swapping the elements on the fly.
-     *
-     * <p>This method determines each block's base address by means of two parameters,
-     * and so it provides (in effect) a <em>double-register</em> addressing mode,
-     * as discussed in {@link sun.misc.Unsafe#getInt(Object,long)}.  When the
-     * object reference is null, the offset supplies an absolute base address.
-     *
-     * @since 8u201
-     */
-    private static void copySwapMemory(Object srcBase, long srcOffset,
-                               Object destBase, long destOffset,
-                               long bytes, long elemSize) {
-        if (bytes < 0) {
-            throw new IllegalArgumentException();
-        }
-        if (elemSize != 2 && elemSize != 4 && elemSize != 8) {
-            throw new IllegalArgumentException();
-        }
-        if (bytes % elemSize != 0) {
-            throw new IllegalArgumentException();
-        }
-        if ((srcBase == null && srcOffset == 0) ||
-            (destBase == null && destOffset == 0)) {
-            throw new NullPointerException();
-        }
-
-        // Must be off-heap, or primitive heap arrays
-        if (srcBase != null && (srcOffset < 0 || !isPrimitiveArray(srcBase.getClass()))) {
-            throw new IllegalArgumentException();
-        }
-        if (destBase != null && (destOffset < 0 || !isPrimitiveArray(destBase.getClass()))) {
-            throw new IllegalArgumentException();
-        }
-
-        // Sanity check size and offsets on 32-bit platforms. Most
-        // significant 32 bits must be zero.
-        if (unsafe.addressSize() == 4 &&
-            (bytes >>> 32 != 0 || srcOffset >>> 32 != 0 || destOffset >>> 32 != 0)) {
-            throw new IllegalArgumentException();
-        }
-
-        if (bytes == 0) {
-            return;
-        }
-
-        copySwapMemory0(srcBase, srcOffset, destBase, destOffset, bytes, elemSize);
-    }
-
 }

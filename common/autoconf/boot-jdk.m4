@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2014 Red Hat, Inc.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -283,6 +284,25 @@ AC_DEFUN_ONCE([BOOTJDK_SETUP_BOOT_JDK],
   BOOTJDK_CHECK_TOOL_IN_BOOTJDK(RMIC,rmic)
   BOOTJDK_CHECK_TOOL_IN_BOOTJDK(NATIVE2ASCII,native2ascii)
 
+  # Allow JAR command to be overridden
+  # Doing so allows a faster native jar program to be used
+  # when building Zero
+  AC_MSG_CHECKING([for an alternate jar command])
+  AC_ARG_WITH([alt-jar],
+              [AS_HELP_STRING(--with-alt-jar=PATH, specify the location of an alternate jar binary to use for building)],
+  [
+    if test "x${withval}" != xyes -a "x${withval}" != xno; then
+      ALT_JAR_CMD=${withval}
+    else
+      ALT_JAR_CMD="false"
+    fi
+  ],
+  [ 
+    ALT_JAR_CMD="false"
+  ])
+  AC_MSG_RESULT(${ALT_JAR_CMD})
+  AC_SUBST(ALT_JAR_CMD)
+
   # Finally, set some other options...
 
   # When compiling code to be executed by the Boot JDK, force jdk7 compatibility.
@@ -303,6 +323,9 @@ AC_DEFUN_ONCE([BOOTJDK_SETUP_BOOT_JDK],
 
 AC_DEFUN_ONCE([BOOTJDK_SETUP_BOOT_JDK_ARGUMENTS],
 [
+  # Ensure OPENJDK_TARGET_CPU_ARCH has been setup
+  AC_REQUIRE([PLATFORM_SETUP_OPENJDK_BUILD_AND_TARGET])
+
   ##############################################################################
   #
   # Specify options for anything that is run with the Boot JDK.
@@ -325,11 +348,14 @@ AC_DEFUN_ONCE([BOOTJDK_SETUP_BOOT_JDK_ARGUMENTS],
   JAVA_FLAGS=$boot_jdk_jvmargs
   AC_SUBST(JAVA_FLAGS)
 
-
   AC_MSG_CHECKING([flags for boot jdk java command for big workloads])
 
   # Starting amount of heap memory.
-  ADD_JVM_ARG_IF_OK([-Xms64M],boot_jdk_jvmargs_big,[$JAVA])
+  if test "x$OPENJDK_BUILD_CPU_ARCH" = "xs390"; then
+    ADD_JVM_ARG_IF_OK([-Xms256M],boot_jdk_jvmargs_big,[$JAVA])
+  else
+    ADD_JVM_ARG_IF_OK([-Xms64M],boot_jdk_jvmargs_big,[$JAVA])
+  fi
 
   # Maximum amount of heap memory.
   # Maximum stack size.

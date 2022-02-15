@@ -131,6 +131,10 @@ public class TestECDSA extends PKCS11Test {
             return;
         }
 
+        if (isBadSolarisSparc(provider)) {
+            return;
+        }
+
         /*
          * PKCS11Test.main will remove this provider if needed
          */

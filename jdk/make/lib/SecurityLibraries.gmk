@@ -64,6 +64,14 @@ BUILD_LIBRARIES += $(BUILD_LIBJAAS)
 
 ##########################################################################################
 
+ifeq ($(USE_EXTERNAL_PCSC), true)
+  J2PCSC_CFLAGS := -DUSE_SYSTEM_PCSC $(PCSC_CFLAGS)
+  J2PCSC_LIBS := $(PCSC_LIBS)
+else
+  J2PCSC_CFLAGS := -I$(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/sun/security/smartcardio/MUSCLE
+  J2PCSC_LIBS := $(LIBDL)
+endif
+
 $(eval $(call SetupNativeCompilation,BUILD_LIBJ2PCSC, \
     LIBRARY := j2pcsc, \
     OUTPUT_DIR := $(INSTALL_LIBRARIES_HERE), \
@@ -72,14 +80,13 @@ $(eval $(call SetupNativeCompilation,BUILD_LIBJ2PCSC, \
     LANG := C, \
     CFLAGS_posix := -D__sun_jdk, \
     OPTIMIZATION := LOW, \
-    CFLAGS := $(CFLAGS_JDKLIB) \
+    CFLAGS := $(CFLAGS_JDKLIB) $(J2PCSC_CFLAGS) \
         -I$(JDK_TOPDIR)/src/share/native/sun/security/smartcardio \
-        -I$(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/sun/security/smartcardio \
-        -I$(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/sun/security/smartcardio/MUSCLE, \
+        -I$(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/sun/security/smartcardio, \
     MAPFILE := $(JDK_TOPDIR)/make/mapfiles/libj2pcsc/mapfile-vers, \
     LDFLAGS := $(LDFLAGS_JDKLIB) \
         $(call SET_SHARED_LIBRARY_ORIGIN), \
-    LDFLAGS_SUFFIX_posix := $(LIBDL), \
+    LDFLAGS_SUFFIX_posix := $(J2PCSC_LIBS), \
     LDFLAGS_SUFFIX_windows := winscard.lib, \
     LDFLAGS_SUFFIX_solaris := -lc, \
     VERSIONINFO_RESOURCE := $(JDK_TOPDIR)/src/windows/resource/version.rc, \
@@ -130,6 +137,10 @@ ifneq ($(BUILD_CRYPTO), no)
     BUILD_LIBKRB5_NAME := osxkrb5
     BUILD_LIBKRB5_SRC := $(JDK_TOPDIR)/src/share/native/sun/security/krb5
     BUILD_LIBKRB5_LIBS := -framework Kerberos
+  else ifeq ($(USE_EXTERNAL_KRB5), true)
+    BUILD_LIBKRB5_NAME := j2krb5
+    BUILD_LIBKRB5_SRC := $(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/sun/security/krb5
+    BUILD_LIBKRB5_LIBS := $(KRB5_LIBS)
   endif
 
   ifneq ($(BUILD_LIBKRB5_NAME), )
@@ -141,7 +152,7 @@ ifneq ($(BUILD_CRYPTO), no)
         SRC := $(BUILD_LIBKRB5_SRC), \
         LANG := C, \
         OPTIMIZATION := LOW, \
-        CFLAGS := $(CFLAGS_JDKLIB) \
+        CFLAGS := $(CFLAGS_JDKLIB) $(KRB5_CFLAGS) \
             -I$(JDK_TOPDIR)/src/share/native/sun/security/krb5 \
             -I$(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/sun/security/krb5, \
         LDFLAGS := $(LDFLAGS_JDKLIB) \

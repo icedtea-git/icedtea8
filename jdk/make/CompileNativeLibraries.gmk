@@ -41,9 +41,15 @@ $(eval $(call FillCacheFind, $(JDK_TOPDIR)/src))
 # Build tools
 include Tools.gmk
 
+# Handle warnings appropriately
+WARNING_CFLAGS = -Wno-unused-parameter
+ifeq ($(USE_CLANG), true)
+  WARNING_CFLAGS += -Qunused-arguments
+endif
+
 # Include the javah generated headers.
-CFLAGS_JDKLIB += -I$(JDK_OUTPUTDIR)/gensrc_headers
-CXXFLAGS_JDKLIB += -I$(JDK_OUTPUTDIR)/gensrc_headers
+CFLAGS_JDKLIB += -I$(JDK_OUTPUTDIR)/gensrc_headers $(WARNING_CFLAGS)
+CXXFLAGS_JDKLIB += -I$(JDK_OUTPUTDIR)/gensrc_headers $(WARNING_CFLAGS)
 
 # Put the libraries here. Different locations for different target apis.
 ifeq ($(OPENJDK_TARGET_OS_API), posix)

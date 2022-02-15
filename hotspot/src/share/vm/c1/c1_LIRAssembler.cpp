@@ -30,6 +30,7 @@
 #include "c1/c1_MacroAssembler.hpp"
 #include "c1/c1_ValueStack.hpp"
 #include "ci/ciInstance.hpp"
+#include "runtime/os.hpp"
 #ifdef TARGET_ARCH_x86
 # include "nativeInst_x86.hpp"
 # include "vmreg_x86.inline.hpp"
@@ -883,7 +884,7 @@ void LIR_Assembler::verify_oop_map(CodeEmitInfo* info) {
           stringStream st;
           st.print("bad oop %s at %d", r->as_Register()->name(), _masm->offset());
 #ifdef SPARC
-          _masm->_verify_oop(r->as_Register(), strdup(st.as_string()), __FILE__, __LINE__);
+          _masm->_verify_oop(r->as_Register(), os::strdup(st.as_string(), mtCompiler), __FILE__, __LINE__);
 #else
           _masm->verify_oop(r->as_Register());
 #endif

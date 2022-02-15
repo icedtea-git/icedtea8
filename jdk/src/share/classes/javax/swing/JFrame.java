@@ -139,8 +139,7 @@ public class JFrame  extends Frame implements WindowConstants,
      * Key into the AppContext, used to check if should provide decorations
      * by default.
      */
-    private static final Object defaultLookAndFeelDecoratedKey =
-            new StringBuffer("JFrame.defaultLookAndFeelDecorated");
+    private static final Object defaultLookAndFeelDecoratedKey = new Object(); // JFrame.defaultLookAndFeelDecorated
 
     private int defaultCloseOperation = HIDE_ON_CLOSE;
 

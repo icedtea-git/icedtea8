@@ -169,14 +169,19 @@ ifeq ($(OPENJDK_TARGET_OS_API), posix)
 
   ifeq (, $(filter $(OPENJDK_TARGET_OS), macosx aix))
 
-    # Suppress unused parameters required by exported JNI functions.
-    SCTP_WERROR := -Werror -Wno-error=unused-parameter
-    ifeq ($(OPENJDK_TARGET_CPU_ARCH), ppc)
-      SCTP_WERROR :=
+    ifeq ($(USE_EXTERNAL_SCTP), true)
+      J2SCTP_CFLAGS := -DUSE_SYSTEM_SCTP $(SCTP_CFLAGS)
+      J2SCTP_LIBS := $(SCTP_LIBS)
+    else
+      J2SCTP_CFLAGS := 
+      J2SCTP_LIBS := $(LIBDL)
     endif
 
+    # Suppress unused parameters required by exported JNI functions.
+    SCTP_WERROR := $(CFLAGS_WARNINGS_ARE_ERRORS)
+
     $(eval $(call SetupNativeCompilation,BUILD_LIBSCTP, \
-        LIBRARY := sctp, \
+        LIBRARY := j2sctp, \
         OUTPUT_DIR := $(INSTALL_LIBRARIES_HERE), \
         SRC := $(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/sun/nio/ch/sctp, \
         LANG := C, \
@@ -187,11 +192,11 @@ ifeq ($(OPENJDK_TARGET_OS_API), posix)
             -I$(JDK_TOPDIR)/src/share/native/java/net \
             -I$(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/sun/nio/ch \
             -I$(JDK_TOPDIR)/src/$(OPENJDK_TARGET_OS_API_DIR)/native/java/net, \
-        CFLAGS_linux := $(SCTP_WERROR), \
+        CFLAGS_linux := $(SCTP_WERROR) $(J2SCTP_CFLAGS), \
         MAPFILE := $(JDK_TOPDIR)/make/mapfiles/libsctp/mapfile-vers, \
         LDFLAGS := $(LDFLAGS_JDKLIB) \
             $(call SET_SHARED_LIBRARY_ORIGIN), \
-        LDFLAGS_SUFFIX_linux := -lpthread $(LIBDL) -ljava -ljvm, \
+        LDFLAGS_SUFFIX_linux := -lpthread $(J2SCTP_LIBS) -ljava -ljvm, \
         LDFLAGS_SUFFIX_posix := -lnio -lnet, \
         LDFLAGS_SUFFIX_solaris := -lsocket -ljava -ljvm -lc, \
         LDFLAGS_SUFFIX_macosx := -ljava -ljvm, \

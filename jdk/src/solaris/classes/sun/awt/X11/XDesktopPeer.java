@@ -27,6 +27,8 @@ package sun.awt.X11;
 
 import sun.awt.UNIXToolkit;
 
+import sun.awt.UNIXToolkit;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;

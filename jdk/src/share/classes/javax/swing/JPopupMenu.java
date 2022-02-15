@@ -33,19 +33,14 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.beans.*;
 
-import java.util.Locale;
 import java.util.Vector;
-import java.util.Hashtable;
 import javax.accessibility.*;
 import javax.swing.plaf.PopupMenuUI;
-import javax.swing.plaf.ComponentUI;
 import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.event.*;
 
 import sun.awt.SunToolkit;
 import sun.security.util.SecurityConstants;
-
-import java.applet.Applet;
 
 /**
  * An implementation of a popup menu -- a small window that pops up
@@ -95,8 +90,7 @@ public class JPopupMenu extends JComponent implements Accessible,MenuElement {
     /**
      * Key used in AppContext to determine if light way popups are the default.
      */
-    private static final Object defaultLWPopupEnabledKey =
-        new StringBuffer("JPopupMenu.defaultLWPopupEnabledKey");
+    private static final Object defaultLWPopupEnabledKey = new Object(); // JPopupMenu.defaultLWPopupEnabledKey
 
     /** Bug#4425878-Property javax.swing.adjustPopupLocationToFit introduced */
     static boolean popupPostionFixDisabled = false;

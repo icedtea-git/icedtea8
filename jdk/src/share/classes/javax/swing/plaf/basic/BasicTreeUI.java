@@ -58,8 +58,7 @@ import sun.swing.UIAction;
 
 public class BasicTreeUI extends TreeUI
 {
-    private static final StringBuilder BASELINE_COMPONENT_KEY =
-        new StringBuilder("Tree.baselineComponent");
+    private static final Object BASELINE_COMPONENT_KEY = new Object(); // Tree.baselineComponent
 
     // Old actions forward to an instance of this.
     static private final Actions SHARED_ACTION = new Actions();

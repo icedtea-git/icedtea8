@@ -57,8 +57,10 @@ $(LIBJSIG): $(JSIGSRCDIR)/jsig.c $(LIBJSIG_MAPFILE)
 	$(QUIETLY) $(CC) $(SYMFLAG) $(ARCHFLAG) $(SHARED_FLAG) $(PICFLAG) \
                          $(LFLAGS_JSIG) $(JSIG_OPT_FLAGS) -o $@ $(JSIGSRCDIR)/jsig.c -ldl
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
 	$(QUIETLY) $(OBJCOPY) --only-keep-debug $@ $(LIBJSIG_DEBUGINFO)
 	$(QUIETLY) $(OBJCOPY) --add-gnu-debuglink=$(LIBJSIG_DEBUGINFO) $@
+  endif
   ifeq ($(STRIP_POLICY),all_strip)
 	$(QUIETLY) $(STRIP) $@
   else
@@ -67,9 +69,11 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
     # implied else here is no stripping at all
     endif
   endif
+  ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
 	$(ZIPEXE) -q -y $(LIBJSIG_DIZ) $(LIBJSIG_DEBUGINFO)
 	$(RM) $(LIBJSIG_DEBUGINFO)
+  endif
   endif
 endif
 

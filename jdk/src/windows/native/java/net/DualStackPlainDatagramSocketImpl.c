@@ -22,10 +22,8 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#include <windows.h>
-#include <winsock2.h>
-#include "jni.h"
 #include "net_util.h"
+
 #include "java_net_DualStackPlainDatagramSocketImpl.h"
 
 /*
@@ -55,7 +53,7 @@ static jboolean purgeOutstandingICMP(JNIEnv *env, jint fd)
             break;
         }
         if (recvfrom(fd, buf, 1, MSG_PEEK,
-                         (struct sockaddr *)&rmtaddr, &addrlen) != JVM_IO_ERR) {
+                         (struct sockaddr *)&rmtaddr, &addrlen) != SOCKET_ERROR) {
             break;
         }
         if (WSAGetLastError() != WSAECONNRESET) {
@@ -222,7 +220,7 @@ JNIEXPORT jint JNICALL Java_java_net_DualStackPlainDatagramSocketImpl_socketLoca
     int len = sizeof(sa);
 
     if (getsockname(fd, (struct sockaddr *)&sa, &len) == SOCKET_ERROR) {
-        NET_ThrowNew(env, WSAGetLastError(), "JVM_GetSockName");
+        NET_ThrowNew(env, WSAGetLastError(), "getsockname");
         return -1;
     }
     return (int) ntohs((u_short)GET_PORT(&sa));
@@ -305,12 +303,9 @@ JNIEXPORT jint JNICALL Java_java_net_DualStackPlainDatagramSocketImpl_socketRece
                 if (rv == 0) {
                     JNU_ThrowByName(env,JNU_JAVANETPKG "SocketTimeoutException",
                                     "Receive timed out");
-                } else if (rv == JVM_IO_ERR) {
+                } else if (rv == -1) {
                     JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException",
                                     "Socket closed");
-                } else if (rv == JVM_IO_INTR) {
-                    JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                                    "operation interrupted");
                 }
                 if (packetBufferLen > MAX_BUFFER_LEN) {
                     free(fullPacket);
@@ -434,7 +429,7 @@ JNIEXPORT void JNICALL Java_java_net_DualStackPlainDatagramSocketImpl_socketSend
     int rv;
 
     if (connected) {
-        sap = 0; /* arg to JVM_Sendto () null in this case */
+        sap = 0; /* arg to sendto () null in this case */
         sa_len = 0;
     } else {
         if (NET_InetAddressToSockaddr(env, iaObj, port, (struct sockaddr *)&sa,
@@ -463,11 +458,8 @@ JNIEXPORT void JNICALL Java_java_net_DualStackPlainDatagramSocketImpl_socketSend
                                (jbyte *)fullPacket);
     rv = sendto(fd, fullPacket, length, 0, (struct sockaddr *)sap, sa_len);
     if (rv == SOCKET_ERROR) {
-        if (rv == JVM_IO_ERR) {
+        if (rv == -1) {
             NET_ThrowNew(env, WSAGetLastError(), "Datagram send failed");
-        } else if (rv == JVM_IO_INTR) {
-            JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                            "operation interrupted");
         }
     }
 

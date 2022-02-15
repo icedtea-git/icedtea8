@@ -445,6 +445,23 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
     AC_SUBST($2CXXSTD_CXXFLAG)
   fi
 
+  #
+  # NOTE: check for -mstackrealign needs to be below potential addition of -m32
+  #
+  if test "x$OPENJDK_TARGET_CPU" = xx86 && test "x$OPENJDK_TARGET_OS" = xmacosx -o \
+                                                "x$OPENJDK_TARGET_OS" = xlinux; then
+    # On 32-bit MacOSX the OS requires C-entry points to be 16 byte aligned.
+    # While waiting for a better solution, the current workaround is to use -mstackrealign
+    # This is also required on Linux systems which use libraries compiled with SSE instructions
+    REALIGN_CFLAG="-mstackrealign"
+    FLAGS_COMPILER_CHECK_ARGUMENTS([$REALIGN_CFLAG -Werror], [],
+      AC_MSG_ERROR([The selected compiler $CXX does not support -mstackrealign! Try to put another compiler in the path.])
+    )
+    CFLAGS_JDK="${CFLAGS_JDK} ${REALIGN_CFLAG}"
+    CXXFLAGS_JDK="${CXXFLAGS_JDK} ${REALIGN_CFLAG}"
+    AC_SUBST([REALIGN_CFLAG])
+  fi
+
   if test "x$CFLAGS" != "x${ADDED_CFLAGS}"; then
     AC_MSG_WARN([Ignoring CFLAGS($CFLAGS) found in environment. Use --with-extra-cflags])
   fi
@@ -500,6 +517,7 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
   # CXXFLAGS_JDK and CCXXFLAGS_JDK (common to C and CXX?)
   if test "x$TOOLCHAIN_TYPE" = xgcc; then
     # these options are used for both C and C++ compiles
+    CFLAGS_WARNINGS_ARE_ERRORS="-Werror"
     CCXXFLAGS_JDK="$CCXXFLAGS $CCXXFLAGS_JDK -Wall -Wno-parentheses -Wextra -Wno-unused -Wno-unused-parameter -Wformat=2 \
         -pipe -fstack-protector -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE"
     case $OPENJDK_TARGET_CPU_ARCH in
@@ -515,6 +533,12 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
         CFLAGS_JDK="${CFLAGS_JDK} -fno-strict-aliasing"
         ;;
     esac
+    
+    FLAGS_COMPILER_CHECK_ARGUMENTS([-ffp-contract=off -Werror],
+                                   [FP_CONTRACT_SUPPORTED="true"],
+                                   [FP_CONTRACT_SUPPORTED="false"])
+    AC_SUBST([FP_CONTRACT_SUPPORTED])
+
     TOOLCHAIN_CHECK_COMPILER_VERSION(6, FLAGS_SETUP_GCC6_COMPILER_FLAGS)
     # Check that the compiler supports -Wformat-overflow flag
     # Set USE_FORMAT_OVERFLOW to 1 if it does.
@@ -553,6 +577,7 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
       FDLIBM_CFLAGS="$COMPILER_FP_CONTRACT_OFF_FLAG"
     fi
   elif test "x$TOOLCHAIN_TYPE" = xsolstudio; then
+    CFLAGS_WARNINGS_ARE_ERRORS="-errtags -errwarn=%all"
     CCXXFLAGS_JDK="$CCXXFLAGS $CCXXFLAGS_JDK -DTRACING -DMACRO_MEMSYS_OPS -DBREAKPTS"
     if test "x$OPENJDK_TARGET_CPU_ARCH" = xx86; then
       CCXXFLAGS_JDK="$CCXXFLAGS_JDK -DcpuIntel -Di586 -D$OPENJDK_TARGET_CPU_LEGACY_LIB"
@@ -565,6 +590,7 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
     CFLAGS_JDK="$CFLAGS_JDK -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE -DSTDC"
     CXXFLAGS_JDK="$CXXFLAGS_JDK -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE -DSTDC"
   elif test "x$TOOLCHAIN_TYPE" = xmicrosoft; then
+    CFLAGS_WARNINGS_ARE_ERRORS="-WX"
     CCXXFLAGS_JDK="$CCXXFLAGS $CCXXFLAGS_JDK \
         -Zi -MD -Zc:wchar_t- -W3 -wd4800 \
         -DWIN32_LEAN_AND_MEAN \
@@ -596,7 +622,6 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
       C_O_FLAG_NORM="$C_O_FLAG_NORM"
       CXX_O_FLAG_HI="$CXX_O_FLAG_NORM"
       CXX_O_FLAG_NORM="$CXX_O_FLAG_NORM"
-      JAVAC_FLAGS="$JAVAC_FLAGS -g"
       ;;
     slowdebug )
       CFLAGS_JDK="$CFLAGS_JDK $CFLAGS_DEBUG_SYMBOLS"
@@ -605,9 +630,12 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_FOR_JDK],
       C_O_FLAG_NORM="$C_O_FLAG_NONE"
       CXX_O_FLAG_HI="$CXX_O_FLAG_NONE"
       CXX_O_FLAG_NORM="$CXX_O_FLAG_NONE"
-      JAVAC_FLAGS="$JAVAC_FLAGS -g"
       ;;
   esac
+  if test "x$JAVA_DEBUG_SYMBOLS" = "xyes"; then
+     JAVAC_FLAGS="$JAVAC_FLAGS -g"
+  fi
+  AC_SUBST(CFLAGS_WARNINGS_ARE_ERRORS)
 
   # Setup LP64
   CCXXFLAGS_JDK="$CCXXFLAGS_JDK $ADD_LP64"
@@ -917,6 +945,24 @@ AC_DEFUN_ONCE([FLAGS_SETUP_COMPILER_FLAGS_MISC],
       [COMPILER_SUPPORTS_TARGET_BITS_FLAG=true],
       [COMPILER_SUPPORTS_TARGET_BITS_FLAG=false])
   AC_SUBST(COMPILER_SUPPORTS_TARGET_BITS_FLAG)
+
+  AC_ARG_ENABLE([warnings-as-errors], [AS_HELP_STRING([--disable-warnings-as-errors],
+      [consider native warnings to be an error @<:@disabled@:>@])])
+
+  AC_MSG_CHECKING([if native warnings are errors])
+  if test "x$enable_warnings_as_errors" = "xyes"; then
+    AC_MSG_RESULT([yes (explicitly set)])
+    WARNINGS_AS_ERRORS=true
+  elif test "x$enable_warnings_as_errors" = "xno"; then
+    AC_MSG_RESULT([no])
+    WARNINGS_AS_ERRORS=false
+  elif test "x$enable_warnings_as_errors" = "x"; then
+    AC_MSG_RESULT([no (default)])
+    WARNINGS_AS_ERRORS=false
+  else
+    AC_MSG_ERROR([--enable-warnings-as-errors accepts no argument])
+  fi
+  AC_SUBST(WARNINGS_AS_ERRORS)
 ])
 
 AC_DEFUN_ONCE([FLAGS_SETUP_GCC6_COMPILER_FLAGS],

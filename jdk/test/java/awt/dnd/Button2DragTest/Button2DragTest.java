@@ -23,6 +23,7 @@
 
 /*
   test
+ * @key headful
   @bug 4955110
   @summary tests that a drag ends on button2 release
   @author Alexander.Gerasimov area=dnd

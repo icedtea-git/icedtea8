@@ -998,7 +998,7 @@ public class SctpMultiChannelImpl extends SctpMultiChannel
         java.security.AccessController.doPrivileged(
             new java.security.PrivilegedAction<Void>() {
                 public Void run() {
-                    System.loadLibrary("sctp");
+                    System.loadLibrary("j2sctp");
                     return null;
                 }
             });

@@ -269,6 +269,7 @@ EXPORT_LIST += $(EXPORT_DOCS_DIR)/platform/jvmti/jvmti.html
 EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.$(LIBRARY_SUFFIX)
 
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
       EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.diz
   else
@@ -278,6 +279,7 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
         EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.debuginfo
     endif
   endif
+endif
 endif
 
 EXPORT_SERVER_DIR = $(EXPORT_JRE_LIB_ARCH_DIR)/server
@@ -289,6 +291,7 @@ ifeq ($(findstring true, $(JVM_VARIANT_SERVER) $(JVM_VARIANT_ZERO) $(JVM_VARIANT
   EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.$(LIBRARY_SUFFIX)
 
   ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
         EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.diz
     else
@@ -299,6 +302,7 @@ ifeq ($(findstring true, $(JVM_VARIANT_SERVER) $(JVM_VARIANT_ZERO) $(JVM_VARIANT
       endif
     endif
   endif
+  endif
 endif
 
 ifeq ($(JVM_VARIANT_CLIENT),true)
@@ -306,6 +310,7 @@ ifeq ($(JVM_VARIANT_CLIENT),true)
   EXPORT_LIST += $(EXPORT_CLIENT_DIR)/libjvm.$(LIBRARY_SUFFIX)
 
   ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
         EXPORT_LIST += $(EXPORT_CLIENT_DIR)/libjvm.diz
     else
@@ -315,6 +320,7 @@ ifeq ($(JVM_VARIANT_CLIENT),true)
           EXPORT_LIST += $(EXPORT_CLIENT_DIR)/libjvm.debuginfo
       endif
     endif
+  endif
   endif
 endif
 
@@ -329,6 +335,7 @@ ADD_SA_BINARIES/x86   = $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.$(LIBRARY_SUFFIX) \
                         $(EXPORT_LIB_DIR)/sa-jdi.jar
 
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
       ADD_SA_BINARIES/x86 += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.diz
   else
@@ -346,6 +353,7 @@ ADD_SA_BINARIES/universal = $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.$(LIBRARY_SUFFI
                             $(EXPORT_LIB_DIR)/sa-jdi.jar
 
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
       ADD_SA_BINARIES/universal += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.diz
   else
@@ -355,6 +363,7 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
         ADD_SA_BINARIES/universal += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.debuginfo
     endif
   endif
+endif
 endif
 
 ADD_SA_BINARIES/ppc   =
@@ -398,6 +407,7 @@ ifeq ($(OS_VENDOR), Darwin)
     UNIVERSAL_COPY_LIST += $(EXPORT_JRE_LIB_DIR)/server/Xusage.txt
     UNIVERSAL_COPY_LIST += $(EXPORT_JRE_LIB_DIR)/client/Xusage.txt
     ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+    ifneq ($(STRIP_POLICY),no_strip)
       ifeq ($(ZIP_DEBUGINFO_FILES),1)
           UNIVERSAL_COPY_LIST += $(EXPORT_JRE_LIB_DIR)/server/libjvm.diz
           UNIVERSAL_COPY_LIST += $(EXPORT_JRE_LIB_DIR)/client/libjvm.diz
@@ -409,6 +419,7 @@ ifeq ($(OS_VENDOR), Darwin)
           UNIVERSAL_COPY_LIST += $(EXPORT_JRE_LIB_DIR)/libjsig.$(LIBRARY_SUFFIX).dSYM
           UNIVERSAL_COPY_LIST += $(EXPORT_JRE_LIB_DIR)/libsaproc.$(LIBRARY_SUFFIX).dSYM
       endif
+    endif
     endif
 
   endif

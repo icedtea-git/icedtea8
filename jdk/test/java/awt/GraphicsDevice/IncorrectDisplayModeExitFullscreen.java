@@ -30,6 +30,7 @@ import java.awt.GraphicsEnvironment;
 
 /**
  * @test
+ * @key headful
  * @bug 8019587
  * @author Sergey Bylokhov
  * @library ../../../lib/testlibrary/

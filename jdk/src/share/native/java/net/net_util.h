@@ -36,12 +36,6 @@
 
 #define MAX_PACKET_LEN 65536
 
-#define IPv4 1
-#define IPv6 2
-
-#define NET_ERROR(env, ex, msg) \
-{ if (!(*env)->ExceptionOccurred(env)) JNU_ThrowByName(env, ex, msg); }
-
 /************************************************************************
  * Cached field IDs
  *
@@ -64,12 +58,12 @@ JNIEXPORT void JNICALL initInetAddressIDs(JNIEnv *env);
  * get_ methods that return objects return NULL on error.
  */
 extern jobject getInet6Address_scopeifname(JNIEnv *env, jobject ia6Obj);
-extern int setInet6Address_scopeifname(JNIEnv *env, jobject ia6Obj, jobject scopeifname);
+extern jboolean setInet6Address_scopeifname(JNIEnv *env, jobject ia6Obj, jobject scopeifname);
 extern int getInet6Address_scopeid_set(JNIEnv *env, jobject ia6Obj);
 extern int getInet6Address_scopeid(JNIEnv *env, jobject ia6Obj);
-extern int setInet6Address_scopeid(JNIEnv *env, jobject ia6Obj, int scopeid);
-extern int getInet6Address_ipaddress(JNIEnv *env, jobject ia6Obj, char *dest);
-extern int setInet6Address_ipaddress(JNIEnv *env, jobject ia6Obj, char *address);
+extern jboolean setInet6Address_scopeid(JNIEnv *env, jobject ia6Obj, int scopeid);
+extern jboolean getInet6Address_ipaddress(JNIEnv *env, jobject ia6Obj, char *dest);
+extern jboolean setInet6Address_ipaddress(JNIEnv *env, jobject ia6Obj, char *address);
 
 extern void setInetAddress_addr(JNIEnv *env, jobject iaObj, int address);
 extern void setInetAddress_family(JNIEnv *env, jobject iaObj, int family);
@@ -123,50 +117,48 @@ JNIEXPORT void JNICALL Java_java_net_Inet6Address_init(JNIEnv *env, jclass cls);
 JNIEXPORT void JNICALL Java_java_net_NetworkInterface_init(JNIEnv *env, jclass cls);
 
 JNIEXPORT void JNICALL NET_ThrowNew(JNIEnv *env, int errorNum, char *msg);
+
 int NET_GetError();
 
 void NET_ThrowCurrent(JNIEnv *env, char *msg);
 
 jfieldID NET_GetFileDescriptorID(JNIEnv *env);
 
-JNIEXPORT jint JNICALL ipv6_available() ;
+JNIEXPORT jint JNICALL ipv6_available();
 
 void
 NET_AllocSockaddr(struct sockaddr **him, int *len);
 
 JNIEXPORT int JNICALL
-NET_InetAddressToSockaddr(JNIEnv *env, jobject iaObj, int port, struct sockaddr *him, int *len, jboolean v4MappedAddress);
+NET_InetAddressToSockaddr(JNIEnv *env, jobject iaObj, int port,
+                          struct sockaddr *him, int *len,
+                          jboolean v4MappedAddress);
 
 JNIEXPORT jobject JNICALL
 NET_SockaddrToInetAddress(JNIEnv *env, struct sockaddr *him, int *port);
 
 void platformInit();
+
 void parseExclusiveBindProperty(JNIEnv *env);
 
-void
-NET_SetTrafficClass(struct sockaddr *him, int trafficClass);
+void NET_SetTrafficClass(struct sockaddr *him, int trafficClass);
 
-JNIEXPORT jint JNICALL
-NET_GetPortFromSockaddr(struct sockaddr *him);
+JNIEXPORT jint JNICALL NET_GetPortFromSockaddr(struct sockaddr *him);
 
 JNIEXPORT jint JNICALL
 NET_SockaddrEqualsInetAddress(JNIEnv *env,struct sockaddr *him, jobject iaObj);
 
-int
-NET_IsIPv4Mapped(jbyte* caddr);
+int NET_IsIPv4Mapped(jbyte* caddr);
 
-int
-NET_IPv4MappedToIPv4(jbyte* caddr);
+int NET_IPv4MappedToIPv4(jbyte* caddr);
 
-int
-NET_IsEqual(jbyte* caddr1, jbyte* caddr2);
+int NET_IsEqual(jbyte* caddr1, jbyte* caddr2);
 
-int
-NET_IsZeroAddr(jbyte* caddr);
+int NET_IsZeroAddr(jbyte* caddr);
 
 /* Socket operations
  *
- * These work just like the JVM_* procedures, except that they may do some
+ * These work just like the system calls, except that they may do some
  * platform-specific pre/post processing of the arguments and/or results.
  */
 
@@ -188,9 +180,9 @@ NET_MapSocketOptionV6(jint cmd, int *level, int *optname);
 JNIEXPORT jint JNICALL
 NET_EnableFastTcpLoopback(int fd);
 
-int getScopeID (struct sockaddr *);
+int getScopeID(struct sockaddr *);
 
-int cmpScopeID (unsigned int, struct sockaddr *);
+int cmpScopeID(unsigned int, struct sockaddr *);
 
 unsigned short in_cksum(unsigned short *addr, int len);
 

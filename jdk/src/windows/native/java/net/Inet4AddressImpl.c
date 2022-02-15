@@ -22,24 +22,12 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-#include <windows.h>
-#include <winsock2.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <malloc.h>
-#include <sys/types.h>
-#include <process.h>
-#include <iphlpapi.h>
-#include <icmpapi.h>
-#include <WinError.h>
+
+#include "net_util.h"
 
 #include "java_net_InetAddress.h"
 #include "java_net_Inet4AddressImpl.h"
-#include "net_util.h"
-#include "icmp.h"
-
 
 /*
  * Returns true if hostname is in dotted IP address format. Note that this
@@ -367,7 +355,7 @@ tcp_ping4(JNIEnv *env,
      * Can't create a raw socket, so let's try a TCP socket
      */
     fd = NET_Socket(AF_INET, SOCK_STREAM, 0);
-    if (fd == JVM_IO_ERR) {
+    if (fd == SOCKET_ERROR) {
         /* note: if you run out of fds, you may not be able to load
          * the exception class, and get a NoClassDefFoundError
          * instead.

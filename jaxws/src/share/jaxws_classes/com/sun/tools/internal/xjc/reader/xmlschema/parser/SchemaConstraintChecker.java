@@ -71,6 +71,14 @@ public class SchemaConstraintChecker {
         SchemaFactory sf = XmlFactory.createSchemaFactory(W3C_XML_SCHEMA_NS_URI, disableXmlSecurity);
         XmlFactory.allowExternalAccess(sf, "all", disableXmlSecurity);
         sf.setErrorHandler(errorFilter);
+        try {
+            // By default the SchemaFactory imposes a limit of 5000 on
+            // xsd:sequence maxOccurs if a SecurityManager is
+            // installed.  This breaks the specification of xjc,
+            // causing TCK failures.
+            sf.setProperty("http://apache.org/xml/properties/security-manager", null);
+        } catch (SAXException e) {
+        }
         if( entityResolver != null ) {
             sf.setResourceResolver(new LSResourceResolver() {
                 public LSInput resolveResource(String type, String namespaceURI, String publicId, String systemId, String baseURI) {

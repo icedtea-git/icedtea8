@@ -28,6 +28,7 @@
  * @run testng/othervm LdapTimeoutTest
  * @bug 7094377 8000487 6176036 7056489 8151678
  * @summary Timeout tests for ldap
+ * @key intermittent
  */
 
 import org.testng.Assert;

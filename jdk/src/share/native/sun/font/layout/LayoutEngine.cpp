@@ -672,12 +672,20 @@ LayoutEngine *LayoutEngine::layoutEngineFactory(const LEFontInstance *fontInstan
             break;
         }
     } else {
+        if (LE_FAILURE(success)) {
+	    // Reset if gsubTable failed
+            success = LE_NO_ERROR;
+        }
         LEReferenceTo<MorphTableHeader2> morxTable(fontInstance, morxTableTag, success);
         if (LE_SUCCESS(success) &&
             morxTable.isValid() &&
             SWAPL(morxTable->version)==0x00020000) {
             result = new GXLayoutEngine2(fontInstance, scriptCode, languageCode, morxTable, typoFlags, success);
         } else {
+          if (LE_FAILURE(success)) {
+	    // Reset if morxTable failed
+            success = LE_NO_ERROR;
+          }
           LEReferenceTo<MorphTableHeader> mortTable(fontInstance, mortTableTag, success);
           if (LE_SUCCESS(success) && mortTable.isValid() && SWAPL(mortTable->version)==0x00010000) { // mort
             result = new GXLayoutEngine(fontInstance, scriptCode, languageCode, mortTable, success);

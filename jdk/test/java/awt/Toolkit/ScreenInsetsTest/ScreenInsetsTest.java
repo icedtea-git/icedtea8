@@ -23,6 +23,7 @@
 
 /*
   @test
+  @key headful
   @bug 4737732
   @summary Tests that Toolkit.getScreenInsets() returns correct insets
   @author artem.ananiev: area=awt.toplevel

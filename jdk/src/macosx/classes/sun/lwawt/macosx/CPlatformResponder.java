@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,8 +57,7 @@ final class CPlatformResponder {
      * Handles mouse events.
      */
     void handleMouseEvent(int eventType, int modifierFlags, int buttonNumber,
-                          int clickCount, int x, int y, int absoluteX,
-                          int absoluteY) {
+                          int clickCount, int x, int y, int absX, int absY) {
         final SunToolkit tk = (SunToolkit)Toolkit.getDefaultToolkit();
         if ((buttonNumber > 2 && !tk.areExtraMouseButtonsEnabled())
                 || buttonNumber > tk.getNumberOfButtons() - 1) {
@@ -84,14 +83,15 @@ final class CPlatformResponder {
         boolean jpopupTrigger = NSEvent.isPopupTrigger(jmodifiers);
 
         eventNotifier.notifyMouseEvent(jeventType, System.currentTimeMillis(), jbuttonNumber,
-                x, y, absoluteX, absoluteY, jmodifiers, jclickCount,
+                x, y, absX, absY, jmodifiers, jclickCount,
                 jpopupTrigger, null);
     }
 
     /**
      * Handles scroll events.
      */
-    void handleScrollEvent(final int x, final int y, final int modifierFlags,
+    void handleScrollEvent(final int x, final int y, final int absX,
+                           final int absY, final int modifierFlags,
                            final double deltaX, final double deltaY,
                            final int scrollPhase) {
         final int buttonNumber = CocoaConstants.kCGMouseButtonCenter;
@@ -104,26 +104,27 @@ final class CPlatformResponder {
 
         // Vertical scroll.
         if (!isShift && (deltaY != 0.0 || roundDeltaY != 0)) {
-            dispatchScrollEvent(x, y, jmodifiers, roundDeltaY, deltaY);
+            dispatchScrollEvent(x, y, absX, absY, jmodifiers, roundDeltaY, deltaY);
         }
         // Horizontal scroll or shirt+vertical scroll.
         final double delta = isShift && deltaY != 0.0 ? deltaY : deltaX;
         final int roundDelta = isShift && roundDeltaY != 0 ? roundDeltaY : roundDeltaX;
         if (delta != 0.0 || roundDelta != 0) {
             jmodifiers |= InputEvent.SHIFT_DOWN_MASK;
-            dispatchScrollEvent(x, y, jmodifiers, roundDelta, delta);
+            dispatchScrollEvent(x, y, absX, absY, jmodifiers, roundDelta, delta);
         }
     }
 
-    private void dispatchScrollEvent(final int x, final int y,
-                                     final int modifiers,
+    private void dispatchScrollEvent(final int x, final int y, final int absX,
+                                     final int absY, final int modifiers,
                                      final int roundDelta, final double delta) {
         final long when = System.currentTimeMillis();
         final int scrollType = MouseWheelEvent.WHEEL_UNIT_SCROLL;
         final int scrollAmount = 1;
         // invert the wheelRotation for the peer
-        eventNotifier.notifyMouseWheelEvent(when, x, y, modifiers, scrollType,
-                scrollAmount, -roundDelta, -delta, null);
+        eventNotifier.notifyMouseWheelEvent(when, x, y, absX, absY, modifiers,
+                                            scrollType, scrollAmount,
+                                            -roundDelta, -delta, null);
     }
 
     /**

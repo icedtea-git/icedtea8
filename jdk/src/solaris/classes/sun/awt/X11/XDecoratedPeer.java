@@ -737,16 +737,13 @@ abstract class XDecoratedPeer extends XWindowPeer {
 
         updateChildrenSizes();
 
-        // Bounds of the window
-        Rectangle targetBounds = AWTAccessor.getComponentAccessor().getBounds((Component)target);
-
         Point newLocation = getNewLocation(xe, currentInsets.left, currentInsets.top);
 
         WindowDimensions newDimensions =
                 new WindowDimensions(newLocation,
-                new Dimension(xe.get_width(), xe.get_height()),
-                copy(currentInsets),
-                true);
+                                     new Dimension(scaleDown(xe.get_width()),
+                                                   scaleDown(xe.get_height())),
+                                     copy(currentInsets), true);
 
         if (insLog.isLoggable(PlatformLogger.Level.FINER)) {
             insLog.finer("Insets are {0}, new dimensions {1}",
@@ -792,8 +789,9 @@ abstract class XDecoratedPeer extends XWindowPeer {
         XToolkit.awtLock();
         try {
             updateSizeHints(rec.x, rec.y, rec.width, rec.height);
-            XlibWrapper.XResizeWindow(XToolkit.getDisplay(), getShell(), rec.width, rec.height);
-            XlibWrapper.XMoveWindow(XToolkit.getDisplay(), getShell(), rec.x, rec.y);
+            XlibWrapper.XMoveResizeWindow(XToolkit.getDisplay(), getShell(),
+                                          scaleUp(rec.x), scaleUp(rec.y),
+                                          scaleUp(rec.width), scaleUp(rec.height));
         }
         finally {
             XToolkit.awtUnlock();
@@ -806,7 +804,8 @@ abstract class XDecoratedPeer extends XWindowPeer {
         XToolkit.awtLock();
         try {
             updateSizeHints(rec.x, rec.y, rec.width, rec.height);
-            XlibWrapper.XResizeWindow(XToolkit.getDisplay(), getShell(), rec.width, rec.height);
+            XlibWrapper.XResizeWindow(XToolkit.getDisplay(), getShell(),
+                                      scaleUp(rec.width), scaleUp(rec.height));
         }
         finally {
             XToolkit.awtUnlock();
@@ -819,7 +818,8 @@ abstract class XDecoratedPeer extends XWindowPeer {
         XToolkit.awtLock();
         try {
             updateSizeHints(rec.x, rec.y, rec.width, rec.height);
-            XlibWrapper.XMoveWindow(XToolkit.getDisplay(), getShell(), rec.x, rec.y);
+            XlibWrapper.XMoveWindow(XToolkit.getDisplay(), getShell(),
+                                    scaleUp(rec.x), scaleUp(rec.y));
         }
         finally {
             XToolkit.awtUnlock();

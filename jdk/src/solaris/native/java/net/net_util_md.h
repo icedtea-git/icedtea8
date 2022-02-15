@@ -26,127 +26,41 @@
 #ifndef NET_UTILS_MD_H
 #define NET_UTILS_MD_H
 
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <netdb.h>
-#include <netinet/in.h>
-#include <unistd.h>
-
-#ifndef USE_SELECT
 #include <sys/poll.h>
-#endif
+#include <sys/socket.h>
 
+int NET_Timeout(int s, long timeout);
+int NET_Timeout0(int s, long timeout, long currentTime);
+int NET_Read(int s, void* buf, size_t len);
+int NET_NonBlockingRead(int s, void* buf, size_t len);
+int NET_TimeoutWithCurrentTime(int s, long timeout, long currentTime);
+long NET_GetCurrentTime();
+int NET_RecvFrom(int s, void *buf, int len, unsigned int flags,
+                 struct sockaddr *from, socklen_t *fromlen);
+int NET_ReadV(int s, const struct iovec * vector, int count);
+int NET_Send(int s, void *msg, int len, unsigned int flags);
+int NET_SendTo(int s, const void *msg, int len,  unsigned  int
+               flags, const struct sockaddr *to, int tolen);
+int NET_Writev(int s, const struct iovec * vector, int count);
+int NET_Connect(int s, struct sockaddr *addr, int addrlen);
+int NET_Accept(int s, struct sockaddr *addr, socklen_t *addrlen);
+int NET_SocketClose(int s);
+int NET_Dup2(int oldfd, int newfd);
+int NET_Poll(struct pollfd *ufds, unsigned int nfds, int timeout);
+int NET_SocketAvailable(int s, jint *pbytes);
 
-/*
-   AIX needs a workaround for I/O cancellation, see:
-   http://publib.boulder.ibm.com/infocenter/pseries/v5r3/index.jsp?topic=/com.ibm.aix.basetechref/doc/basetrf1/close.htm
-   ...
-   The close subroutine is blocked until all subroutines which use the file
-   descriptor return to usr space. For example, when a thread is calling close
-   and another thread is calling select with the same file descriptor, the
-   close subroutine does not return until the select call returns.
-   ...
-*/
-#if !defined(__solaris__)
-extern int NET_Timeout(int s, long timeout);
-extern int NET_Timeout0(int s, long timeout, long currentTime);
-extern int NET_Read(int s, void* buf, size_t len);
-extern int NET_NonBlockingRead(int s, void* buf, size_t len);
-extern int NET_TimeoutWithCurrentTime(int s, long timeout, long currentTime);
-extern long NET_GetCurrentTime();
-extern int NET_RecvFrom(int s, void *buf, int len, unsigned int flags,
-       struct sockaddr *from, int *fromlen);
-extern int NET_ReadV(int s, const struct iovec * vector, int count);
-extern int NET_Send(int s, void *msg, int len, unsigned int flags);
-extern int NET_SendTo(int s, const void *msg, int len,  unsigned  int
-       flags, const struct sockaddr *to, int tolen);
-extern int NET_Writev(int s, const struct iovec * vector, int count);
-extern int NET_Connect(int s, struct sockaddr *addr, int addrlen);
-extern int NET_Accept(int s, struct sockaddr *addr, int *addrlen);
-extern int NET_SocketClose(int s);
-extern int NET_Dup2(int oldfd, int newfd);
+void NET_ThrowUnknownHostExceptionWithGaiError(JNIEnv *env,
+                                               const char* hostname,
+                                               int gai_error);
+void NET_ThrowByNameWithLastError(JNIEnv *env, const char *name,
+                                  const char *defaultDetail);
 
-#ifdef USE_SELECT
-extern int NET_Select(int s, fd_set *readfds, fd_set *writefds,
-               fd_set *exceptfds, struct timeval *timeout);
-#else
-extern int NET_Poll(struct pollfd *ufds, unsigned int nfds, int timeout);
-#endif
+#define NET_WAIT_READ    0x01
+#define NET_WAIT_WRITE   0x02
+#define NET_WAIT_CONNECT 0x04
 
-#else
-
-#define NET_Timeout     JVM_Timeout
-#define NET_Read        JVM_Read
-#define NET_RecvFrom    JVM_RecvFrom
-#define NET_ReadV       readv
-#define NET_Send        JVM_Send
-#define NET_SendTo      JVM_SendTo
-#define NET_WriteV      writev
-#define NET_Connect     JVM_Connect
-#define NET_Accept      JVM_Accept
-#define NET_SocketClose JVM_SocketClose
-#define NET_Dup2        dup2
-#define NET_Select      select
-#define NET_Poll        poll
-
-#endif
-
-#if defined(__linux__) && defined(AF_INET6)
-int getDefaultIPv6Interface(struct in6_addr *target_addr);
-#endif
-
-#ifdef __solaris__
-extern int net_getParam(char *driver, char *param);
-
-#ifndef SO_FLOW_SLA
-#define SO_FLOW_SLA 0x1018
-
-#if _LONG_LONG_ALIGNMENT == 8 && _LONG_LONG_ALIGNMENT_32 == 4
-#pragma pack(4)
- #endif
-
-/*
- * Used with the setsockopt(SO_FLOW_SLA, ...) call to set
- * per socket service level properties.
- * When the application uses per-socket API, we will enforce the properties
- * on both outbound and inbound packets.
- *
- * For now, only priority and maxbw are supported in SOCK_FLOW_PROP_VERSION1.
- */
-typedef struct sock_flow_props_s {
-        int             sfp_version;
-        uint32_t        sfp_mask;
-        int             sfp_priority;   /* flow priority */
-        uint64_t        sfp_maxbw;      /* bandwidth limit in bps */
-        int             sfp_status;     /* flow create status for getsockopt */
-} sock_flow_props_t;
-
-#define SOCK_FLOW_PROP_VERSION1 1
-
-/* bit mask values for sfp_mask */
-#define SFP_MAXBW       0x00000001      /* Flow Bandwidth Limit */
-#define SFP_PRIORITY    0x00000008      /* Flow priority */
-
-/* possible values for sfp_priority */
-#define SFP_PRIO_NORMAL 1
-#define SFP_PRIO_HIGH   2
-
-#if _LONG_LONG_ALIGNMENT == 8 && _LONG_LONG_ALIGNMENT_32 == 4
-#pragma pack()
-#endif /* _LONG_LONG_ALIGNMENT */
-
-#endif /* SO_FLOW_SLA */
-#endif /* __solaris__ */
-
-void ThrowUnknownHostExceptionWithGaiError(JNIEnv *env,
-                                           const char* hostname,
-                                           int gai_error);
-
-#define NET_WAIT_READ   0x01
-#define NET_WAIT_WRITE  0x02
-#define NET_WAIT_CONNECT        0x04
-
-extern jint NET_Wait(JNIEnv *env, jint fd, jint flags, jint timeout);
+jint NET_Wait(JNIEnv *env, jint fd, jint flags, jint timeout);
 
 /************************************************************************
  * Macros and constants
@@ -183,12 +97,55 @@ extern jint NET_Wait(JNIEnv *env, jint fd, jint flags, jint timeout);
 /************************************************************************
  *  Utilities
  */
+
 #ifdef __linux__
-extern int kernelIsV24();
+int kernelIsV24();
+#ifdef AF_INET6
+int getDefaultIPv6Interface(struct in6_addr *target_addr);
+#endif
 #endif
 
-void NET_ThrowByNameWithLastError(JNIEnv *env, const char *name,
-                   const char *defaultDetail);
+#ifdef __solaris__
+int net_getParam(char *driver, char *param);
 
+#ifndef SO_FLOW_SLA
+#define SO_FLOW_SLA 0x1018
+
+#if _LONG_LONG_ALIGNMENT == 8 && _LONG_LONG_ALIGNMENT_32 == 4
+#pragma pack(4)
+#endif
+
+/*
+ * Used with the setsockopt(SO_FLOW_SLA, ...) call to set
+ * per socket service level properties.
+ * When the application uses per-socket API, we will enforce the properties
+ * on both outbound and inbound packets.
+ *
+ * For now, only priority and maxbw are supported in SOCK_FLOW_PROP_VERSION1.
+ */
+typedef struct sock_flow_props_s {
+        int             sfp_version;
+        uint32_t        sfp_mask;
+        int             sfp_priority;   /* flow priority */
+        uint64_t        sfp_maxbw;      /* bandwidth limit in bps */
+        int             sfp_status;     /* flow create status for getsockopt */
+} sock_flow_props_t;
+
+#define SOCK_FLOW_PROP_VERSION1 1
+
+/* bit mask values for sfp_mask */
+#define SFP_MAXBW       0x00000001      /* Flow Bandwidth Limit */
+#define SFP_PRIORITY    0x00000008      /* Flow priority */
+
+/* possible values for sfp_priority */
+#define SFP_PRIO_NORMAL 1
+#define SFP_PRIO_HIGH   2
+
+#if _LONG_LONG_ALIGNMENT == 8 && _LONG_LONG_ALIGNMENT_32 == 4
+#pragma pack()
+#endif /* _LONG_LONG_ALIGNMENT */
+
+#endif /* SO_FLOW_SLA */
+#endif /* __solaris__ */
 
 #endif /* NET_UTILS_MD_H */

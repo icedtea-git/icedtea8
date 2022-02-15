@@ -22,54 +22,35 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-#include <errno.h>
-#include <strings.h>
-#include <netinet/in.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #include <net/if.h>
 #include <net/if_arp.h>
-
-#if defined(__solaris__)
-#include <sys/dlpi.h>
-#include <fcntl.h>
-#include <stropts.h>
-#include <sys/sockio.h>
-#endif
-
-#if defined(__linux__)
+#include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
-#include <sys/utsname.h>
-#include <stdio.h>
-#endif
 
 #if defined(_AIX)
-#include <sys/ioctl.h>
 #include <netinet/in6_var.h>
 #include <sys/ndd_var.h>
 #include <sys/kinfo.h>
 #endif
 
-#if defined(_ALLBSD_SOURCE)
-#include <sys/param.h>
-#include <sys/ioctl.h>
+#if defined(__solaris__)
+#include <stropts.h>
+#include <sys/dlpi.h>
 #include <sys/sockio.h>
-#if defined(__APPLE__)
-#include <net/ethernet.h>
-#include <net/if_var.h>
-#include <net/if_dl.h>
-#include <netinet/in_var.h>
-#include <ifaddrs.h>
-#endif
 #endif
 
-#include "jvm.h"
-#include "jni_util.h"
+#if defined(_ALLBSD_SOURCE)
+#include <net/ethernet.h>
+#include <net/if_dl.h>
+#include <ifaddrs.h>
+#endif
+
 #include "net_util.h"
+
+#include "java_net_InetAddress.h"
 
 #if defined(__linux__)
     #define _PATH_PROCNET_IFINET6 "/proc/net/if_inet6"
@@ -339,9 +320,9 @@ JNIEXPORT jobject JNICALL Java_java_net_NetworkInterface_getByInetAddress0
     int family = getInetAddress_family(env, iaObj);
     JNU_CHECK_EXCEPTION_RETURN(env, NULL);
 
-    if (family == IPv4) {
+    if (family == java_net_InetAddress_IPv4) {
         family = AF_INET;
-    } else if (family == IPv6) {
+    } else if (family == java_net_InetAddress_IPv6) {
         family = AF_INET6;
     } else {
         return NULL; // Invalid family
@@ -1082,7 +1063,7 @@ static short translateIPv6AddressToPrefix(struct sockaddr_in6 *addr) {
 static int openSocket(JNIEnv *env, int proto) {
     int sock;
 
-    if ((sock = JVM_Socket(proto, SOCK_DGRAM, 0)) < 0) {
+    if ((sock = socket(proto, SOCK_DGRAM, 0)) < 0) {
         // If EPROTONOSUPPORT is returned it means we don't have
         // support for this proto so don't throw an exception.
         if (errno != EPROTONOSUPPORT) {
@@ -1106,11 +1087,11 @@ static int openSocket(JNIEnv *env, int proto) {
 static int openSocketWithFallback(JNIEnv *env, const char *ifname) {
     int sock;
 
-    if ((sock = JVM_Socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         if (errno == EPROTONOSUPPORT) {
-            if ((sock = JVM_Socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-                NET_ThrowByNameWithLastError
-                    (env, JNU_JAVANETPKG "SocketException", "IPV6 Socket creation failed");
+              if ( (sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0 ){
+                NET_ThrowByNameWithLastError(env, JNU_JAVANETPKG "SocketException",
+                                             "IPV6 Socket creation failed");
                 return -1;
             }
         } else { // errno is not NOSUPPORT
@@ -1353,9 +1334,9 @@ static int getFlags(int sock, const char *ifname, int *flags) {
 static int openSocketWithFallback(JNIEnv *env, const char *ifname) {
     int sock;
 
-    if ((sock = JVM_Socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         if (errno == EPROTONOSUPPORT) {
-            if ((sock = JVM_Socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
+            if ((sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
                 NET_ThrowByNameWithLastError
                     (env, JNU_JAVANETPKG "SocketException", "IPV6 Socket creation failed");
                 return -1;
@@ -1638,11 +1619,11 @@ static int openSocketWithFallback(JNIEnv *env, const char *ifname) {
     int sock, alreadyV6 = 0;
     struct lifreq if2;
 
-    if ((sock = JVM_Socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         if (errno == EPROTONOSUPPORT) {
-            if ((sock = JVM_Socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-                NET_ThrowByNameWithLastError
-                    (env, JNU_JAVANETPKG "SocketException", "IPV6 Socket creation failed");
+              if ( (sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0 ){
+                NET_ThrowByNameWithLastError(env, JNU_JAVANETPKG "SocketException",
+                                             "IPV6 Socket creation failed");
                 return -1;
             }
             alreadyV6 = 1;
@@ -1664,9 +1645,9 @@ static int openSocketWithFallback(JNIEnv *env, const char *ifname) {
         strncpy(if2.lifr_name, ifname, sizeof(if2.lifr_name) - 1);
         if (ioctl(sock, SIOCGLIFNETMASK, (char *)&if2) < 0) {
             close(sock);
-            if ((sock = JVM_Socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-                NET_ThrowByNameWithLastError
-                    (env, JNU_JAVANETPKG "SocketException", "IPV6 Socket creation failed");
+	    if ( (sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0 ){
+                NET_ThrowByNameWithLastError(env, JNU_JAVANETPKG "SocketException",
+                                             "IPV6 Socket creation failed");
                 return -1;
             }
         }
@@ -1999,19 +1980,19 @@ static int getFlags(int sock, const char *ifname, int *flags) {
 static int openSocketWithFallback(JNIEnv *env, const char *ifname) {
     int sock;
 
-    if ((sock = JVM_Socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        if (errno == EPROTONOSUPPORT) {
-            if ((sock = JVM_Socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-                NET_ThrowByNameWithLastError
-                    (env, JNU_JAVANETPKG "SocketException", "IPV6 Socket creation failed");
-                return -1;
-            }
-        } else { // errno is not NOSUPPORT
-            NET_ThrowByNameWithLastError
-                (env, JNU_JAVANETPKG "SocketException", "IPV4 Socket creation failed");
-            return -1;
-        }
-    }
+     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+         if (errno == EPROTONOSUPPORT) {
+              if ( (sock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0 ){
+                 NET_ThrowByNameWithLastError(env, JNU_JAVANETPKG "SocketException",
+                                              "IPV6 Socket creation failed");
+                 return -1;
+              }
+         } else { // errno is not NOSUPPORT
+             NET_ThrowByNameWithLastError(env, JNU_JAVANETPKG "SocketException",
+                                          "IPV4 Socket creation failed");
+             return -1;
+         }
+   }
 
     return sock;
 }

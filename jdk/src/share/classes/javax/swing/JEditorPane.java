@@ -1534,12 +1534,9 @@ public class JEditorPane extends JTextComponent {
     /*
      * Private AppContext keys for this class's static variables.
      */
-    private static final Object kitRegistryKey =
-        new StringBuffer("JEditorPane.kitRegistry");
-    private static final Object kitTypeRegistryKey =
-        new StringBuffer("JEditorPane.kitTypeRegistry");
-    private static final Object kitLoaderRegistryKey =
-        new StringBuffer("JEditorPane.kitLoaderRegistry");
+    private static final Object kitRegistryKey = new Object(); // JEditorPane.kitRegistry
+    private static final Object kitTypeRegistryKey = new Object(); // JEditorPane.kitTypeRegistry
+    private static final Object kitLoaderRegistryKey = new Object(); // JEditorPane.kitLoaderRegistry
 
     /**
      * @see #getUIClassID

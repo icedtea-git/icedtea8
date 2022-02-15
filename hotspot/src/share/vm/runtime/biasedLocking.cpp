@@ -151,8 +151,13 @@ static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_
   if (!mark->has_bias_pattern()) {
     if (TraceBiasedLocking) {
       ResourceMark rm;
-      tty->print_cr("  (Skipping revocation of object of type %s because it's no longer biased)",
-                    obj->klass()->external_name());
+      tty->print_cr("  (Skipping revocation of object " INTPTR_FORMAT
+                    ", mark " INTPTR_FORMAT ", type %s"
+                    ", requesting thread " INTPTR_FORMAT
+                    " because it's no longer biased)",
+                    p2i((void *)obj), (intptr_t) mark,
+                    obj->klass()->external_name(),
+                    (intptr_t) requesting_thread);
     }
     return BiasedLocking::NOT_BIASED;
   }
@@ -163,8 +168,15 @@ static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_
 
   if (TraceBiasedLocking && (Verbose || !is_bulk)) {
     ResourceMark rm;
-    tty->print_cr("Revoking bias of object " INTPTR_FORMAT " , mark " INTPTR_FORMAT " , type %s , prototype header " INTPTR_FORMAT " , allow rebias %d , requesting thread " INTPTR_FORMAT,
-                  p2i((void *)obj), (intptr_t) mark, obj->klass()->external_name(), (intptr_t) obj->klass()->prototype_header(), (allow_rebias ? 1 : 0), (intptr_t) requesting_thread);
+    tty->print_cr("Revoking bias of object " INTPTR_FORMAT ", mark "
+                  INTPTR_FORMAT ", type %s, prototype header " INTPTR_FORMAT
+                  ", allow rebias %d, requesting thread " INTPTR_FORMAT,
+                  p2i((void *)obj),
+                  (intptr_t) mark,
+                  obj->klass()->external_name(),
+                  (intptr_t) obj->klass()->prototype_header(),
+                  (allow_rebias ? 1 : 0),
+                  (intptr_t) requesting_thread);
   }
 
   JavaThread* biased_thread = mark->biased_locker();
@@ -200,9 +212,15 @@ static BiasedLocking::Condition revoke_bias(oop obj, bool allow_rebias, bool is_
       obj->set_mark(unbiased_prototype);
     }
     if (TraceBiasedLocking && (Verbose || !is_bulk)) {
-      tty->print_cr("  Revoked bias of object biased toward dead thread");
+      tty->print_cr("  Revoked bias of object biased toward dead thread ("
+                              PTR_FORMAT ")", p2i(biased_thread));
     }
     return BiasedLocking::BIAS_REVOKED;
+  }
+
+  if (TraceBiasedLocking && (Verbose || !is_bulk)) {
+    tty->print_cr("  Revoked bias of object biased toward live thread ("
+                  PTR_FORMAT ")", p2i(biased_thread));
   }
 
   // Thread owning bias is alive.

@@ -65,6 +65,7 @@ $(LIBJSIG): $(JSIGSRCDIR)/jsig.c $(LIBJSIG_MAPFILE)
                          $(LFLAGS_JSIG) $(JSIG_DEBUG_CFLAGS) $(JSIG_OPT_FLAGS) -o $@ $< -ldl
 
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
   # AIX produces .debuginfo from copy of -g compiled object prior to strip
 	$(QUIETLY) $(CP) $@ $(LIBJSIG_DEBUGINFO)
 #  ifeq ($(STRIP_POLICY),all_strip)
@@ -75,7 +76,6 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
 #    # implied else here is no stripping at all
 #    endif
 #  endif
-  ifneq ($(STRIP_POLICY),no_strip)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
 	$(ZIPEXE) -q -y $(LIBJSIG_DIZ) $(LIBJSIG_DEBUGINFO)
 	$(RM) $(LIBJSIG_DEBUGINFO)

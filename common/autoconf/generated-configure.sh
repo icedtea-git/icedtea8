@@ -651,10 +651,27 @@ LLVM_CONFIG
 LIBFFI_LIBS
 LIBFFI_CFLAGS
 STATIC_CXX_SETTING
+USE_EXTERNAL_SCTP
+SCTP_LIBS
+SCTP_CFLAGS
+USE_EXTERNAL_PCSC
+PCSC_LIBS
+PCSC_CFLAGS
+USE_EXTERNAL_KRB5
+KRB5_LIBS
+KRB5_CFLAGS
+IMPROVED_FONT_RENDERING_SUPPORT
+FONTCONFIG_LIBS
 LIBDL
 LIBM
 LIBZIP_CAN_USE_MMAP
 USE_EXTERNAL_LIBZ
+USE_EXTERNAL_LIBPNG
+PNG_LIBS
+PNG_CFLAGS
+USE_EXTERNAL_LCMS
+LCMS_LIBS
+LCMS_CFLAGS
 USE_EXTERNAL_LIBGIF
 USE_EXTERNAL_LIBJPEG
 FONTCONFIG_CFLAGS
@@ -674,6 +691,7 @@ ZIP_DEBUGINFO_FILES
 DEBUG_BINARIES
 STRIP_POLICY
 ENABLE_DEBUG_SYMBOLS
+WARNINGS_AS_ERRORS
 COMPILER_SUPPORTS_TARGET_BITS_FLAG
 ZERO_ARCHFLAG
 LDFLAGS_CXX_JDK
@@ -686,14 +704,17 @@ CXXFLAGS_JDKLIB
 CFLAGS_JDKEXE
 CFLAGS_JDKLIB
 MACOSX_VERSION_MIN
+CFLAGS_WARNINGS_ARE_ERRORS
 FDLIBM_CFLAGS
 USE_FORMAT_OVERFLOW
 NO_LIFETIME_DSE_CFLAG
 NO_DELETE_NULL_POINTER_CHECKS_CFLAG
+FP_CONTRACT_SUPPORTED
 LEGACY_EXTRA_ASFLAGS
 LEGACY_EXTRA_LDFLAGS
 LEGACY_EXTRA_CXXFLAGS
 LEGACY_EXTRA_CFLAGS
+REALIGN_CFLAG
 CXXSTD_CXXFLAG
 CXX_O_FLAG_NONE
 CXX_O_FLAG_NORM
@@ -819,6 +840,7 @@ JAVA_FLAGS
 BOOT_JDK_BITS
 JAVAC_FLAGS
 BOOT_JDK_SOURCETARGET
+ALT_JAR_CMD
 BOOT_JDK
 BOOT_TOOLSJAR
 BOOT_RTJAR
@@ -850,6 +872,7 @@ COMPRESS_JARS
 UNLIMITED_CRYPTO
 CACERTS_FILE
 TEST_IN_BUILD
+BUILD_HEADFUL
 BUILD_HEADLESS
 SUPPORT_HEADFUL
 SUPPORT_HEADLESS
@@ -1014,7 +1037,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -1045,6 +1067,7 @@ with_jvm_interpreter
 with_jvm_variants
 enable_debug
 with_debug_level
+with_java_debug_symbols
 with_devkit
 with_sys_root
 with_sysroot
@@ -1072,6 +1095,7 @@ with_vendor_bug_url
 with_vendor_vm_bug_url
 with_copyright_year
 with_boot_jdk
+with_alt_jar
 with_boot_jdk_jvmargs
 with_add_source_root
 with_override_source_root
@@ -1091,6 +1115,7 @@ with_extra_cflags
 with_extra_cxxflags
 with_extra_ldflags
 with_extra_asflags
+enable_warnings_as_errors
 enable_debug_symbols
 enable_zip_debug_info
 with_native_debug_symbols
@@ -1108,8 +1133,15 @@ with_alsa_include
 with_alsa_lib
 with_fontconfig
 with_fontconfig_include
+with_libjpeg
 with_giflib
+with_lcms
+with_libpng
 with_zlib
+enable_improved_font_rendering
+enable_system_kerberos
+enable_system_pcsc
+enable_system_sctp
 with_stdc__lib
 with_msvcr_dll
 with_msvcp_dll
@@ -1216,6 +1248,18 @@ FREETYPE_CFLAGS
 FREETYPE_LIBS
 ALSA_CFLAGS
 ALSA_LIBS
+LCMS_CFLAGS
+LCMS_LIBS
+PNG_CFLAGS
+PNG_LIBS
+FONTCONFIG_CFLAGS
+FONTCONFIG_LIBS
+KRB5_CFLAGS
+KRB5_LIBS
+PCSC_CFLAGS
+PCSC_LIBS
+SCTP_CFLAGS
+SCTP_LIBS
 LIBFFI_CFLAGS
 LIBFFI_LIBS
 CCACHE'
@@ -1859,6 +1903,8 @@ Optional Features:
   --enable-unlimited-crypto
                           Enable unlimited crypto policy [disabled]
   --disable-jfr           Disable Java Flight Recorder support [enabled]
+  --disable-warnings-as-errors
+                          consider native warnings to be an error [disabled]
   --disable-debug-symbols disable generation of debug symbols [enabled]
   --disable-zip-debug-info
                           disable zipping of debug-info files [enabled]
@@ -1869,6 +1915,14 @@ Optional Features:
                           disable bundling of the freetype library with the
                           build result [enabled on Windows or when using
                           --with-freetype, disabled otherwise]
+  --enable-improved-font-rendering
+                          build with fontconfig-enhanced font rendering
+                          [disabled]
+  --enable-system-kerberos
+                          use the system Kerberos to get the cache location
+                          [disabled]
+  --enable-system-pcsc    use the system libpcsclite [disabled]
+  --enable-system-sctp    use the system SCTP library [disabled]
   --enable-sjavac         use sjavac to do fast incremental compiles
                           [disabled]
   --disable-precompiled-headers
@@ -1890,6 +1944,9 @@ Optional Packages:
                           [server]
   --with-debug-level      set the debug level (release, fastdebug, slowdebug)
                           [release]
+  --with-java-debug-symbols
+                          set the status of Java debug symbols (yes, no,
+                          default) [default]
   --with-devkit           use this devkit for compilers, tools and resources
   --with-sys-root         alias for --with-sysroot for backwards compatability
   --with-sysroot          use this directory as sysroot)
@@ -1928,6 +1985,8 @@ Optional Packages:
                           crashes [not specified]
   --with-copyright-year   Set copyright year value for build [current year]
   --with-boot-jdk         path to Boot JDK (used to bootstrap build) [probed]
+  --with-alt-jar=PATH     specify the location of an alternate jar binary to
+                          use for building
   --with-boot-jdk-jvmargs specify JVM arguments to be passed to all
                           invocations of the Boot JDK, overriding the default
                           values, e.g --with-boot-jdk-jvmargs="-Xmx8G
@@ -1990,7 +2049,13 @@ Optional Packages:
                           (expecting the headers under PATH/include)
   --with-fontconfig-include
                           specify directory for the fontconfig include files
+  --with-libjpeg          use libjpeg from build system or OpenJDK source
+                          (system, bundled) [bundled]
   --with-giflib           use giflib from build system or OpenJDK source
+                          (system, bundled) [bundled]
+  --with-lcms             use lcms2 from build system or OpenJDK source
+                          (system, bundled) [bundled]
+  --with-libpng           use libpng from build system or OpenJDK source
                           (system, bundled) [bundled]
   --with-zlib             use zlib from build system or OpenJDK source
                           (system, bundled) [bundled]
@@ -2112,6 +2177,20 @@ Some influential environment variables:
               linker flags for FREETYPE, overriding pkg-config
   ALSA_CFLAGS C compiler flags for ALSA, overriding pkg-config
   ALSA_LIBS   linker flags for ALSA, overriding pkg-config
+  LCMS_CFLAGS C compiler flags for LCMS, overriding pkg-config
+  LCMS_LIBS   linker flags for LCMS, overriding pkg-config
+  PNG_CFLAGS  C compiler flags for PNG, overriding pkg-config
+  PNG_LIBS    linker flags for PNG, overriding pkg-config
+  FONTCONFIG_CFLAGS
+              C compiler flags for FONTCONFIG, overriding pkg-config
+  FONTCONFIG_LIBS
+              linker flags for FONTCONFIG, overriding pkg-config
+  KRB5_CFLAGS C compiler flags for KRB5, overriding pkg-config
+  KRB5_LIBS   linker flags for KRB5, overriding pkg-config
+  PCSC_CFLAGS C compiler flags for PCSC, overriding pkg-config
+  PCSC_LIBS   linker flags for PCSC, overriding pkg-config
+  SCTP_CFLAGS C compiler flags for the SCTP library
+  SCTP_LIBS   linker flags for the SCTP library, overriding -lsctp
   LIBFFI_CFLAGS
               C compiler flags for LIBFFI, overriding pkg-config
   LIBFFI_LIBS linker flags for LIBFFI, overriding pkg-config
@@ -3597,6 +3676,7 @@ ac_configure="$SHELL $ac_aux_dir/configure"  # Please don't use this var.
 # ... then the rest
 #
 # Copyright (c) 2011, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright 2014 Red Hat, Inc.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -3881,7 +3961,7 @@ apt_help() {
     pulse)
       PKGHANDLER_COMMAND="sudo apt-get install libpulse-dev" ;;
     x11)
-      PKGHANDLER_COMMAND="sudo apt-get install libX11-dev libxext-dev libxrender-dev libxtst-dev libxt-dev" ;;
+      PKGHANDLER_COMMAND="sudo apt-get install libX11-dev libxext-dev libxrender-dev libxtst-dev libxt-dev libXcomposite-dev" ;;
     ccache)
       PKGHANDLER_COMMAND="sudo apt-get install ccache" ;;
   esac
@@ -4400,7 +4480,7 @@ VS_SDK_PLATFORM_NAME_2017=
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1625670527
+DATE_WHEN_GENERATED=1634938030
 
 ###############################################################################
 #
@@ -13650,9 +13730,9 @@ test -n "$target_alias" &&
       VAR_CPU_BITS=32
       VAR_CPU_ENDIAN=little
       ;;
-    arm*)
-      VAR_CPU=arm
-      VAR_CPU_ARCH=arm
+    arm*|aarch32)
+      VAR_CPU=aarch32
+      VAR_CPU_ARCH=aarch32
       VAR_CPU_BITS=32
       VAR_CPU_ENDIAN=little
       ;;
@@ -13729,6 +13809,14 @@ test -n "$target_alias" &&
 $as_echo_n "checking openjdk-build os-cpu... " >&6; }
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&5
 $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking openjdk-build bit-size" >&5
+$as_echo_n "checking openjdk-build bit-size... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_BUILD_CPU_BITS" >&5
+$as_echo "$OPENJDK_BUILD_CPU_BITS" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking openjdk-build endianness" >&5
+$as_echo_n "checking openjdk-build endianness... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_BUILD_CPU_ENDIAN" >&5
+$as_echo "$OPENJDK_BUILD_CPU_ENDIAN" >&6; }
 
   # Convert the autoconf OS/CPU value to our own data, into the VAR_OS/CPU variables.
 
@@ -13788,9 +13876,9 @@ $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
       VAR_CPU_BITS=32
       VAR_CPU_ENDIAN=little
       ;;
-    arm*)
-      VAR_CPU=arm
-      VAR_CPU_ARCH=arm
+    arm*|aarch32)
+      VAR_CPU=aarch32
+      VAR_CPU_ARCH=aarch32
       VAR_CPU_BITS=32
       VAR_CPU_ENDIAN=little
       ;;
@@ -13867,6 +13955,14 @@ $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
 $as_echo_n "checking openjdk-target os-cpu... " >&6; }
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU" >&5
 $as_echo "$OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking openjdk-target bit-size" >&5
+$as_echo_n "checking openjdk-target bit-size... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_TARGET_CPU_BITS" >&5
+$as_echo "$OPENJDK_TARGET_CPU_BITS" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking openjdk-target endianness" >&5
+$as_echo_n "checking openjdk-target endianness... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OPENJDK_TARGET_CPU_ENDIAN" >&5
+$as_echo "$OPENJDK_TARGET_CPU_ENDIAN" >&6; }
 
 
 
@@ -13997,6 +14093,8 @@ $as_echo "$COMPILE_TYPE" >&6; }
   elif test "x$OPENJDK_TARGET_OS" != xmacosx && test "x$OPENJDK_TARGET_CPU" = xx86_64; then
     # On all platforms except macosx, we replace x86_64 with amd64.
     OPENJDK_TARGET_CPU_OSARCH="amd64"
+  elif test "x$OPENJDK_TARGET_CPU" = xaarch32; then
+    OPENJDK_TARGET_CPU_OSARCH="arm"
   fi
 
 
@@ -14574,7 +14672,11 @@ fi
 
 
   if test "x$with_jvm_variants" = x; then
-    with_jvm_variants="server"
+    if test "x$OPENJDK_TARGET_CPU" = xaarch32; then
+      with_jvm_variants="client";
+    else
+      with_jvm_variants="server";
+    fi
   fi
 
   JVM_VARIANTS=",$with_jvm_variants,"
@@ -14638,6 +14740,9 @@ $as_echo "$with_jvm_variants" >&6; }
   if test "x$VAR_CPU" = xppc64 -o "x$VAR_CPU" = xppc64le ; then
     INCLUDE_SA=false
   fi
+  if test "x$OPENJDK_TARGET_CPU" = xaarch32; then
+    INCLUDE_SA=false
+  fi
 
 
   if test "x$OPENJDK_TARGET_OS" = "xmacosx"; then
@@ -14688,6 +14793,24 @@ $as_echo "$DEBUG_LEVEL" >&6; }
     as_fn_error $? "Allowed debug levels are: release, fastdebug and slowdebug" "$LINENO" 5
   fi
 
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to enable Java debug symbols" >&5
+$as_echo_n "checking whether to enable Java debug symbols... " >&6; }
+
+# Check whether --with-java-debug-symbols was given.
+if test "${with_java_debug_symbols+set}" = set; then :
+  withval=$with_java_debug_symbols; JAVA_DEBUG_SYMBOLS="${withval}"
+else
+  JAVA_DEBUG_SYMBOLS="default"
+fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $JAVA_DEBUG_SYMBOLS" >&5
+$as_echo "$JAVA_DEBUG_SYMBOLS" >&6; }
+
+  if test "x$JAVA_DEBUG_SYMBOLS" != xyes && \
+      test "x$JAVA_DEBUG_SYMBOLS" != xno && \
+      test "x$JAVA_DEBUG_SYMBOLS" != xdefault; then
+    as_fn_error $? "Allowed Java debug symbol settings are: yes, no, default" "$LINENO" 5
+  fi
 
   ###############################################################################
   #
@@ -14718,6 +14841,16 @@ $as_echo "$DEBUG_LEVEL" >&6; }
       BUILD_VARIANT_RELEASE="-debug"
       HOTSPOT_DEBUG_LEVEL="jvmg"
       HOTSPOT_EXPORT="debug"
+      ;;
+  esac
+
+  # Override DEBUG_CLASSFILES if JAVA_DEBUG_SYMBOLS is set to yes or no
+  case $JAVA_DEBUG_SYMBOLS in
+    yes )
+      DEBUG_CLASSFILES="true"
+      ;;
+    no )
+      DEBUG_CLASSFILES="false"
       ;;
   esac
 
@@ -19750,12 +19883,13 @@ fi
 
   if test "x$SUPPORT_HEADFUL" = xno; then
     # Thus we are building headless only.
-    BUILD_HEADLESS="BUILD_HEADLESS:=true"
+    BUILD_HEADFUL="BUILD_HEADLESS_ONLY:=true"
     headful_msg="headless only"
   fi
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $headful_msg" >&5
 $as_echo "$headful_msg" >&6; }
+
 
 
 
@@ -24805,6 +24939,31 @@ $as_echo "$as_me: Your Boot JDK seems broken. This might be fixed by explicitely
 $as_echo "ok" >&6; }
 
 
+  # Allow JAR command to be overridden
+  # Doing so allows a faster native jar program to be used
+  # when building Zero
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for an alternate jar command" >&5
+$as_echo_n "checking for an alternate jar command... " >&6; }
+
+# Check whether --with-alt-jar was given.
+if test "${with_alt_jar+set}" = set; then :
+  withval=$with_alt_jar;
+    if test "x${withval}" != xyes -a "x${withval}" != xno; then
+      ALT_JAR_CMD=${withval}
+    else
+      ALT_JAR_CMD="false"
+    fi
+
+else
+
+    ALT_JAR_CMD="false"
+
+fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${ALT_JAR_CMD}" >&5
+$as_echo "${ALT_JAR_CMD}" >&6; }
+
+
   # Finally, set some other options...
 
   # When compiling code to be executed by the Boot JDK, force jdk7 compatibility.
@@ -24823,6 +24982,9 @@ $as_echo_n "checking if Boot JDK is 32 or 64 bits... " >&6; }
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $BOOT_JDK_BITS" >&5
 $as_echo "$BOOT_JDK_BITS" >&6; }
 
+
+
+  # Ensure OPENJDK_TARGET_CPU_ARCH has been setup
 
 
   ##############################################################################
@@ -24880,11 +25042,27 @@ $as_echo "$boot_jdk_jvmargs" >&6; }
   JAVA_FLAGS=$boot_jdk_jvmargs
 
 
-
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking flags for boot jdk java command for big workloads" >&5
 $as_echo_n "checking flags for boot jdk java command for big workloads... " >&6; }
 
   # Starting amount of heap memory.
+  if test "x$OPENJDK_BUILD_CPU_ARCH" = "xs390"; then
+
+  $ECHO "Check if jvm arg is ok: -Xms256M" >&5
+  $ECHO "Command: $JAVA -Xms256M -version" >&5
+  OUTPUT=`$JAVA -Xms256M -version 2>&1`
+  FOUND_WARN=`$ECHO "$OUTPUT" | grep -i warn`
+  FOUND_VERSION=`$ECHO $OUTPUT | grep " version \""`
+  if test "x$FOUND_VERSION" != x && test "x$FOUND_WARN" = x; then
+    boot_jdk_jvmargs_big="$boot_jdk_jvmargs_big -Xms256M"
+    JVM_ARG_OK=true
+  else
+    $ECHO "Arg failed:" >&5
+    $ECHO "$OUTPUT" >&5
+    JVM_ARG_OK=false
+  fi
+
+  else
 
   $ECHO "Check if jvm arg is ok: -Xms64M" >&5
   $ECHO "Command: $JAVA -Xms64M -version" >&5
@@ -24900,6 +25078,7 @@ $as_echo_n "checking flags for boot jdk java command for big workloads... " >&6;
     JVM_ARG_OK=false
   fi
 
+  fi
 
   # Maximum amount of heap memory.
   # Maximum stack size.
@@ -28022,7 +28201,7 @@ $as_echo "$as_me: The result from running it was: \"$COMPILER_VERSION_OUTPUT\"" 
     #     warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     COMPILER_VERSION_OUTPUT=`$COMPILER --version 2>&1`
     # Check that this is likely to be GCC.
-    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP "Free Software Foundation" > /dev/null
+    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP -E "^(gcc|g\+\+|distcc)" >&5 2>&1
     if test $? -ne 0; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&5
 $as_echo "$as_me: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&6;}
@@ -29763,7 +29942,7 @@ $as_echo "$as_me: The result from running it was: \"$COMPILER_VERSION_OUTPUT\"" 
     #     warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     COMPILER_VERSION_OUTPUT=`$COMPILER --version 2>&1`
     # Check that this is likely to be GCC.
-    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP "Free Software Foundation" > /dev/null
+    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP -E "^(gcc|g\+\+|distcc)" >&5 2>&1
     if test $? -ne 0; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&5
 $as_echo "$as_me: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&6;}
@@ -41934,6 +42113,7 @@ $as_echo "$ac_cv_c_bigendian" >&6; }
 
 
 
+
   # Special extras...
   if test "x$TOOLCHAIN_TYPE" = xsolstudio; then
     if test "x$OPENJDK_TARGET_CPU_ARCH" = "xsparc"; then
@@ -41993,6 +42173,114 @@ $as_echo "$supports" >&6; }
 
     CXXFLAGS_JDK="${CXXFLAGS_JDK} ${CXXSTD_CXXFLAG}"
     JVM_CFLAGS="${JVM_CFLAGS} ${CXXSTD_CXXFLAG}"
+
+  fi
+
+  #
+  # NOTE: check for -mstackrealign needs to be below potential addition of -m32
+  #
+  if test "x$OPENJDK_TARGET_CPU" = xx86 && test "x$OPENJDK_TARGET_OS" = xmacosx -o \
+                                                "x$OPENJDK_TARGET_OS" = xlinux; then
+    # On 32-bit MacOSX the OS requires C-entry points to be 16 byte aligned.
+    # While waiting for a better solution, the current workaround is to use -mstackrealign
+    # This is also required on Linux systems which use libraries compiled with SSE instructions
+    REALIGN_CFLAG="-mstackrealign"
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the C compiler supports \"$REALIGN_CFLAG -Werror\"" >&5
+$as_echo_n "checking if the C compiler supports \"$REALIGN_CFLAG -Werror\"... " >&6; }
+  supports=yes
+
+  saved_cflags="$CFLAGS"
+  CFLAGS="$CFLAGS $REALIGN_CFLAG -Werror"
+  ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int i;
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+else
+  supports=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+  CFLAGS="$saved_cflags"
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $supports" >&5
+$as_echo "$supports" >&6; }
+  if test "x$supports" = "xyes" ; then
+    C_COMP_SUPPORTS="yes"
+  else
+    C_COMP_SUPPORTS="no"
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the C++ compiler supports \"$REALIGN_CFLAG -Werror\"" >&5
+$as_echo_n "checking if the C++ compiler supports \"$REALIGN_CFLAG -Werror\"... " >&6; }
+  supports=yes
+
+  saved_cxxflags="$CXXFLAGS"
+  CXXFLAGS="$CXXFLAG $REALIGN_CFLAG -Werror"
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int i;
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+
+else
+  supports=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+  CXXFLAGS="$saved_cxxflags"
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $supports" >&5
+$as_echo "$supports" >&6; }
+  if test "x$supports" = "xyes" ; then
+    CXX_COMP_SUPPORTS="yes"
+  else
+    CXX_COMP_SUPPORTS="no"
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if both compilers support \"$REALIGN_CFLAG -Werror\"" >&5
+$as_echo_n "checking if both compilers support \"$REALIGN_CFLAG -Werror\"... " >&6; }
+  supports=no
+  if test "x$C_COMP_SUPPORTS" = "xyes" -a "x$CXX_COMP_SUPPORTS" = "xyes"; then supports=yes; fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $supports" >&5
+$as_echo "$supports" >&6; }
+  if test "x$supports" = "xyes" ; then
+    :
+  else
+    as_fn_error $? "The selected compiler $CXX does not support -mstackrealign! Try to put another compiler in the path." "$LINENO" 5
+
+  fi
+
+    CFLAGS_JDK="${CFLAGS_JDK} ${REALIGN_CFLAG}"
+    CXXFLAGS_JDK="${CXXFLAGS_JDK} ${REALIGN_CFLAG}"
 
   fi
 
@@ -42071,6 +42359,7 @@ fi
   # CXXFLAGS_JDK and CCXXFLAGS_JDK (common to C and CXX?)
   if test "x$TOOLCHAIN_TYPE" = xgcc; then
     # these options are used for both C and C++ compiles
+    CFLAGS_WARNINGS_ARE_ERRORS="-Werror"
     CCXXFLAGS_JDK="$CCXXFLAGS $CCXXFLAGS_JDK -Wall -Wno-parentheses -Wextra -Wno-unused -Wno-unused-parameter -Wformat=2 \
         -pipe -fstack-protector -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE"
     case $OPENJDK_TARGET_CPU_ARCH in
@@ -42086,6 +42375,102 @@ fi
         CFLAGS_JDK="${CFLAGS_JDK} -fno-strict-aliasing"
         ;;
     esac
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the C compiler supports \"-ffp-contract=off -Werror\"" >&5
+$as_echo_n "checking if the C compiler supports \"-ffp-contract=off -Werror\"... " >&6; }
+  supports=yes
+
+  saved_cflags="$CFLAGS"
+  CFLAGS="$CFLAGS -ffp-contract=off -Werror"
+  ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int i;
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+else
+  supports=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+  CFLAGS="$saved_cflags"
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $supports" >&5
+$as_echo "$supports" >&6; }
+  if test "x$supports" = "xyes" ; then
+    C_COMP_SUPPORTS="yes"
+  else
+    C_COMP_SUPPORTS="no"
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the C++ compiler supports \"-ffp-contract=off -Werror\"" >&5
+$as_echo_n "checking if the C++ compiler supports \"-ffp-contract=off -Werror\"... " >&6; }
+  supports=yes
+
+  saved_cxxflags="$CXXFLAGS"
+  CXXFLAGS="$CXXFLAG -ffp-contract=off -Werror"
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int i;
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+
+else
+  supports=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+  CXXFLAGS="$saved_cxxflags"
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $supports" >&5
+$as_echo "$supports" >&6; }
+  if test "x$supports" = "xyes" ; then
+    CXX_COMP_SUPPORTS="yes"
+  else
+    CXX_COMP_SUPPORTS="no"
+  fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if both compilers support \"-ffp-contract=off -Werror\"" >&5
+$as_echo_n "checking if both compilers support \"-ffp-contract=off -Werror\"... " >&6; }
+  supports=no
+  if test "x$C_COMP_SUPPORTS" = "xyes" -a "x$CXX_COMP_SUPPORTS" = "xyes"; then supports=yes; fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $supports" >&5
+$as_echo "$supports" >&6; }
+  if test "x$supports" = "xyes" ; then
+    FP_CONTRACT_SUPPORTED="true"
+  else
+    FP_CONTRACT_SUPPORTED="false"
+  fi
+
+
+
 
   REFERENCE_VERSION=6
 
@@ -42121,8 +42506,7 @@ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
-
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 int i;
 _ACEOF
@@ -42543,6 +42927,7 @@ $as_echo "$supports" >&6; }
       FDLIBM_CFLAGS="$COMPILER_FP_CONTRACT_OFF_FLAG"
     fi
   elif test "x$TOOLCHAIN_TYPE" = xsolstudio; then
+    CFLAGS_WARNINGS_ARE_ERRORS="-errtags -errwarn=%all"
     CCXXFLAGS_JDK="$CCXXFLAGS $CCXXFLAGS_JDK -DTRACING -DMACRO_MEMSYS_OPS -DBREAKPTS"
     if test "x$OPENJDK_TARGET_CPU_ARCH" = xx86; then
       CCXXFLAGS_JDK="$CCXXFLAGS_JDK -DcpuIntel -Di586 -D$OPENJDK_TARGET_CPU_LEGACY_LIB"
@@ -42555,6 +42940,7 @@ $as_echo "$supports" >&6; }
     CFLAGS_JDK="$CFLAGS_JDK -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE -DSTDC"
     CXXFLAGS_JDK="$CXXFLAGS_JDK -D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE -DSTDC"
   elif test "x$TOOLCHAIN_TYPE" = xmicrosoft; then
+    CFLAGS_WARNINGS_ARE_ERRORS="-WX"
     CCXXFLAGS_JDK="$CCXXFLAGS $CCXXFLAGS_JDK \
         -Zi -MD -Zc:wchar_t- -W3 -wd4800 \
         -DWIN32_LEAN_AND_MEAN \
@@ -42586,7 +42972,6 @@ $as_echo "$supports" >&6; }
       C_O_FLAG_NORM="$C_O_FLAG_NORM"
       CXX_O_FLAG_HI="$CXX_O_FLAG_NORM"
       CXX_O_FLAG_NORM="$CXX_O_FLAG_NORM"
-      JAVAC_FLAGS="$JAVAC_FLAGS -g"
       ;;
     slowdebug )
       CFLAGS_JDK="$CFLAGS_JDK $CFLAGS_DEBUG_SYMBOLS"
@@ -42595,9 +42980,12 @@ $as_echo "$supports" >&6; }
       C_O_FLAG_NORM="$C_O_FLAG_NONE"
       CXX_O_FLAG_HI="$CXX_O_FLAG_NONE"
       CXX_O_FLAG_NORM="$CXX_O_FLAG_NONE"
-      JAVAC_FLAGS="$JAVAC_FLAGS -g"
       ;;
   esac
+  if test "x$JAVA_DEBUG_SYMBOLS" = "xyes"; then
+     JAVAC_FLAGS="$JAVAC_FLAGS -g"
+  fi
+
 
   # Setup LP64
   CCXXFLAGS_JDK="$CCXXFLAGS_JDK $ADD_LP64"
@@ -43012,6 +43400,31 @@ $as_echo "$supports" >&6; }
 
 
 
+  # Check whether --enable-warnings-as-errors was given.
+if test "${enable_warnings_as_errors+set}" = set; then :
+  enableval=$enable_warnings_as_errors;
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if native warnings are errors" >&5
+$as_echo_n "checking if native warnings are errors... " >&6; }
+  if test "x$enable_warnings_as_errors" = "xyes"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes (explicitly set)" >&5
+$as_echo "yes (explicitly set)" >&6; }
+    WARNINGS_AS_ERRORS=true
+  elif test "x$enable_warnings_as_errors" = "xno"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+    WARNINGS_AS_ERRORS=false
+  elif test "x$enable_warnings_as_errors" = "x"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no (default)" >&5
+$as_echo "no (default)" >&6; }
+    WARNINGS_AS_ERRORS=false
+  else
+    as_fn_error $? "--enable-warnings-as-errors accepts no argument" "$LINENO" 5
+  fi
+
+
 
 # Setup debug symbols (need objcopy from the toolchain for that)
 
@@ -43155,6 +43568,9 @@ $as_echo "$NATIVE_DEBUG_SYMBOLS" >&6; }
     { $as_echo "$as_me:${as_lineno-$LINENO}: --with-native-debug-symbols not specified. Using values from --disable-debug-symbols and --disable-zip-debug-info" >&5
 $as_echo "$as_me: --with-native-debug-symbols not specified. Using values from --disable-debug-symbols and --disable-zip-debug-info" >&6;}
   fi
+
+
+
 
 
 
@@ -44101,7 +44517,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
   CFLAGS="$CFLAGS $X_CFLAGS"
 
   # Need to include Xlib.h and Xutil.h to avoid "present but cannot be compiled" warnings on Solaris 10
-  for ac_header in X11/extensions/shape.h X11/extensions/Xrender.h X11/extensions/XTest.h X11/Intrinsic.h
+  for ac_header in X11/extensions/shape.h X11/extensions/Xrender.h X11/extensions/XTest.h X11/Intrinsic.h X11/extensions/Xcomposite.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "
@@ -44161,7 +44577,7 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
     fi
   fi
 
-    as_fn_error $? "Could not find all X11 headers (shape.h Xrender.h XTest.h Intrinsic.h). $HELP_MSG" "$LINENO" 5
+    as_fn_error $? "Could not find all X11 headers (shape.h Xrender.h XTest.h Intrinsic.h Xcomposite.h). $HELP_MSG" "$LINENO" 5
   fi
 
 
@@ -48712,10 +49128,43 @@ done
   # Check for the jpeg library
   #
 
-  USE_EXTERNAL_LIBJPEG=true
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -ljpeg" >&5
-$as_echo_n "checking for main in -ljpeg... " >&6; }
-if ${ac_cv_lib_jpeg_main+:} false; then :
+
+# Check whether --with-libjpeg was given.
+if test "${with_libjpeg+set}" = set; then :
+  withval=$with_libjpeg;
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for which libjpeg to use" >&5
+$as_echo_n "checking for which libjpeg to use... " >&6; }
+
+  # default is bundled
+  DEFAULT_LIBJPEG=bundled
+
+  #
+  # if user didn't specify, use DEFAULT_LIBJPEG
+  #
+  if test "x${with_libjpeg}" = "x"; then
+    with_libjpeg=${DEFAULT_LIBJPEG}
+  fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ${with_libjpeg}" >&5
+$as_echo "${with_libjpeg}" >&6; }
+
+  if test "x${with_libjpeg}" = "xbundled"; then
+    USE_EXTERNAL_LIBJPEG=false
+  elif test "x${with_libjpeg}" = "xsystem"; then
+    ac_fn_cxx_check_header_mongrel "$LINENO" "jpeglib.h" "ac_cv_header_jpeglib_h" "$ac_includes_default"
+if test "x$ac_cv_header_jpeglib_h" = xyes; then :
+
+else
+   as_fn_error $? "--with-libjpeg=system specified, but jpeglib.h not found!" "$LINENO" 5
+fi
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for jpeg_CreateDecompress in -ljpeg" >&5
+$as_echo_n "checking for jpeg_CreateDecompress in -ljpeg... " >&6; }
+if ${ac_cv_lib_jpeg_jpeg_CreateDecompress+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -48723,27 +49172,33 @@ LIBS="-ljpeg  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char jpeg_CreateDecompress ();
 int
 main ()
 {
-return main ();
+return jpeg_CreateDecompress ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_cxx_try_link "$LINENO"; then :
-  ac_cv_lib_jpeg_main=yes
+  ac_cv_lib_jpeg_jpeg_CreateDecompress=yes
 else
-  ac_cv_lib_jpeg_main=no
+  ac_cv_lib_jpeg_jpeg_CreateDecompress=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_jpeg_main" >&5
-$as_echo "$ac_cv_lib_jpeg_main" >&6; }
-if test "x$ac_cv_lib_jpeg_main" = xyes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_jpeg_jpeg_CreateDecompress" >&5
+$as_echo "$ac_cv_lib_jpeg_jpeg_CreateDecompress" >&6; }
+if test "x$ac_cv_lib_jpeg_jpeg_CreateDecompress" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBJPEG 1
 _ACEOF
@@ -48751,11 +49206,14 @@ _ACEOF
   LIBS="-ljpeg $LIBS"
 
 else
-   USE_EXTERNAL_LIBJPEG=false
-      { $as_echo "$as_me:${as_lineno-$LINENO}: Will use jpeg decoder bundled with the OpenJDK source" >&5
-$as_echo "$as_me: Will use jpeg decoder bundled with the OpenJDK source" >&6;}
-
+   as_fn_error $? "--with-libjpeg=system specified, but no libjpeg found" "$LINENO" 5
 fi
+
+
+    USE_EXTERNAL_LIBJPEG=true
+  else
+    as_fn_error $? "Invalid use of --with-libjpeg: ${with_libjpeg}, use 'system' or 'bundled'" "$LINENO" 5
+  fi
 
 
 
@@ -48850,6 +49308,227 @@ fi
     USE_EXTERNAL_LIBGIF=true
   else
     as_fn_error $? "Invalid value of --with-giflib: ${with_giflib}, use 'system' or 'bundled'" "$LINENO" 5
+  fi
+
+
+  ###############################################################################
+  #
+  # Check for the lcms2 library
+  #
+
+
+# Check whether --with-lcms was given.
+if test "${with_lcms+set}" = set; then :
+  withval=$with_lcms;
+fi
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for which lcms to use" >&5
+$as_echo_n "checking for which lcms to use... " >&6; }
+
+  DEFAULT_LCMS=bundled
+
+  #
+  # If user didn't specify, use DEFAULT_LCMS
+  #
+  if test "x${with_lcms}" = "x"; then
+      with_lcms=${DEFAULT_LCMS}
+  fi
+
+  if test "x${with_lcms}" = "xbundled"; then
+    USE_EXTERNAL_LCMS=false
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: bundled" >&5
+$as_echo "bundled" >&6; }
+  elif test "x${with_lcms}" = "xsystem"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: system" >&5
+$as_echo "system" >&6; }
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LCMS" >&5
+$as_echo_n "checking for LCMS... " >&6; }
+
+if test -n "$LCMS_CFLAGS"; then
+    pkg_cv_LCMS_CFLAGS="$LCMS_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lcms2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lcms2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LCMS_CFLAGS=`$PKG_CONFIG --cflags "lcms2" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LCMS_LIBS"; then
+    pkg_cv_LCMS_LIBS="$LCMS_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"lcms2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "lcms2") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LCMS_LIBS=`$PKG_CONFIG --libs "lcms2" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LCMS_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "lcms2" 2>&1`
+        else
+	        LCMS_PKG_ERRORS=`$PKG_CONFIG --print-errors "lcms2" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LCMS_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                LCMS_FOUND=no
+elif test $pkg_failed = untried; then
+	LCMS_FOUND=no
+else
+	LCMS_CFLAGS=$pkg_cv_LCMS_CFLAGS
+	LCMS_LIBS=$pkg_cv_LCMS_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	LCMS_FOUND=yes
+fi
+    if test "x${LCMS_FOUND}" = "xyes"; then
+      USE_EXTERNAL_LCMS=true
+    else
+      as_fn_error $? "--with-lcms=system specified, but no lcms found!" "$LINENO" 5
+    fi
+  else
+    as_fn_error $? "Invalid value for --with-lcms: ${with_lcms}, use 'system' or 'bundled'" "$LINENO" 5
+  fi
+
+
+
+  ###############################################################################
+  #
+  # Check for the png library
+  #
+
+
+# Check whether --with-libpng was given.
+if test "${with_libpng+set}" = set; then :
+  withval=$with_libpng;
+fi
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for which libpng to use" >&5
+$as_echo_n "checking for which libpng to use... " >&6; }
+
+  # default is bundled
+  DEFAULT_LIBPNG=bundled
+
+  #
+  # if user didn't specify, use DEFAULT_LIBPNG
+  #
+  if test "x${with_libpng}" = "x"; then
+      with_libpng=${DEFAULT_LIBPNG}
+  fi
+
+  if test "x${with_libpng}" = "xbundled"; then
+      USE_EXTERNAL_LIBPNG=false
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: bundled" >&5
+$as_echo "bundled" >&6; }
+  elif test "x${with_libpng}" = "xsystem"; then
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for PNG" >&5
+$as_echo_n "checking for PNG... " >&6; }
+
+if test -n "$PNG_CFLAGS"; then
+    pkg_cv_PNG_CFLAGS="$PNG_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libpng\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libpng") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PNG_CFLAGS=`$PKG_CONFIG --cflags "libpng" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$PNG_LIBS"; then
+    pkg_cv_PNG_LIBS="$PNG_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libpng\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libpng") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PNG_LIBS=`$PKG_CONFIG --libs "libpng" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        PNG_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "libpng" 2>&1`
+        else
+	        PNG_PKG_ERRORS=`$PKG_CONFIG --print-errors "libpng" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$PNG_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                 LIBPNG_FOUND=no
+elif test $pkg_failed = untried; then
+	 LIBPNG_FOUND=no
+else
+	PNG_CFLAGS=$pkg_cv_PNG_CFLAGS
+	PNG_LIBS=$pkg_cv_PNG_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	 LIBPNG_FOUND=yes
+fi
+      if test "x${LIBPNG_FOUND}" = "xyes"; then
+          USE_EXTERNAL_LIBPNG=true
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: system" >&5
+$as_echo "system" >&6; }
+      else
+          { $as_echo "$as_me:${as_lineno-$LINENO}: result: system not found" >&5
+$as_echo "system not found" >&6; }
+          as_fn_error $? "--with-libpng=system specified, but no libpng found!" "$LINENO" 5
+      fi
+  else
+      as_fn_error $? "Invalid value of --with-libpng: ${with_libpng}, use 'system' or 'bundled'" "$LINENO" 5
   fi
 
 
@@ -49099,6 +49778,492 @@ fi
   LIBDL="$LIBS"
 
   LIBS="$save_LIBS"
+
+  ###############################################################################
+  #
+  # Check whether infinality support is required (requires fontconfig)
+  #
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use fontconfig to provide better font rendering" >&5
+$as_echo_n "checking whether to use fontconfig to provide better font rendering... " >&6; }
+
+  # default is no
+  DEFAULT_IMPROVED_FONT_RENDERING=no
+
+  # Check whether --enable-improved-font-rendering was given.
+if test "${enable_improved_font_rendering+set}" = set; then :
+  enableval=$enable_improved_font_rendering;
+    case "${enableval}" in
+      yes)
+        enable_improved_font_rendering=yes
+        ;;
+      *)
+        enable_improved_font_rendering=no
+        ;;
+    esac
+
+else
+
+    enable_improved_font_rendering=${DEFAULT_IMPROVED_FONT_RENDERING}
+
+fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_improved_font_rendering" >&5
+$as_echo "$enable_improved_font_rendering" >&6; }
+
+  if test "x${enable_improved_font_rendering}" = "xyes"; then
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for FONTCONFIG" >&5
+$as_echo_n "checking for FONTCONFIG... " >&6; }
+
+if test -n "$FONTCONFIG_CFLAGS"; then
+    pkg_cv_FONTCONFIG_CFLAGS="$FONTCONFIG_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"fontconfig\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "fontconfig") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_FONTCONFIG_CFLAGS=`$PKG_CONFIG --cflags "fontconfig" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$FONTCONFIG_LIBS"; then
+    pkg_cv_FONTCONFIG_LIBS="$FONTCONFIG_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"fontconfig\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "fontconfig") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_FONTCONFIG_LIBS=`$PKG_CONFIG --libs "fontconfig" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        FONTCONFIG_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "fontconfig" 2>&1`
+        else
+	        FONTCONFIG_PKG_ERRORS=`$PKG_CONFIG --print-errors "fontconfig" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$FONTCONFIG_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                FONTCONFIG_FOUND=no
+elif test $pkg_failed = untried; then
+	FONTCONFIG_FOUND=no
+else
+	FONTCONFIG_CFLAGS=$pkg_cv_FONTCONFIG_CFLAGS
+	FONTCONFIG_LIBS=$pkg_cv_FONTCONFIG_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	FONTCONFIG_FOUND=yes
+fi
+    if test "x${FONTCONFIG_FOUND}" = xno
+    then
+      as_fn_error $? "Could not find fontconfig; improved font rendering support requires fontconfig." "$LINENO" 5
+    fi
+    IMPROVED_FONT_RENDERING_SUPPORT=true
+  fi
+
+
+  ###############################################################################
+  #
+  # Check for the Kerberos libraries
+  #
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use the system Kerberos installation to obtain the cache location" >&5
+$as_echo_n "checking whether to use the system Kerberos installation to obtain the cache location... " >&6; }
+
+  # default is bundled
+  DEFAULT_SYSTEM_KRB5=no
+
+  # Check whether --enable-system-kerberos was given.
+if test "${enable_system_kerberos+set}" = set; then :
+  enableval=$enable_system_kerberos;
+    case "${enableval}" in
+      yes)
+        system_krb5=yes
+        ;;
+      *)
+        system_krb5=no
+        ;;
+    esac
+
+else
+
+    system_krb5=${DEFAULT_SYSTEM_KRB5}
+
+fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $system_krb5" >&5
+$as_echo "$system_krb5" >&6; }
+
+  if test "x${system_krb5}" = "xyes"; then
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for KRB5" >&5
+$as_echo_n "checking for KRB5... " >&6; }
+
+if test -n "$KRB5_CFLAGS"; then
+    pkg_cv_KRB5_CFLAGS="$KRB5_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"krb5\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "krb5") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_KRB5_CFLAGS=`$PKG_CONFIG --cflags "krb5" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$KRB5_LIBS"; then
+    pkg_cv_KRB5_LIBS="$KRB5_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"krb5\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "krb5") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_KRB5_LIBS=`$PKG_CONFIG --libs "krb5" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        KRB5_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "krb5" 2>&1`
+        else
+	        KRB5_PKG_ERRORS=`$PKG_CONFIG --print-errors "krb5" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$KRB5_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                KRB5_FOUND=no
+elif test $pkg_failed = untried; then
+	KRB5_FOUND=no
+else
+	KRB5_CFLAGS=$pkg_cv_KRB5_CFLAGS
+	KRB5_LIBS=$pkg_cv_KRB5_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	KRB5_FOUND=yes
+fi
+      if test "x${KRB5_FOUND}" = "xyes"; then
+	  USE_EXTERNAL_KRB5=true
+      else
+	  { $as_echo "$as_me:${as_lineno-$LINENO}: Could not find Kerberos using pkg-config; trying via krb5.h and krb5 library" >&5
+$as_echo "$as_me: Could not find Kerberos using pkg-config; trying via krb5.h and krb5 library" >&6;}
+          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for krb5_cc_default in -lkrb5" >&5
+$as_echo_n "checking for krb5_cc_default in -lkrb5... " >&6; }
+if ${ac_cv_lib_krb5_krb5_cc_default+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lkrb5  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char krb5_cc_default ();
+int
+main ()
+{
+return krb5_cc_default ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_krb5_krb5_cc_default=yes
+else
+  ac_cv_lib_krb5_krb5_cc_default=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_krb5_krb5_cc_default" >&5
+$as_echo "$ac_cv_lib_krb5_krb5_cc_default" >&6; }
+if test "x$ac_cv_lib_krb5_krb5_cc_default" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBKRB5 1
+_ACEOF
+
+  LIBS="-lkrb5 $LIBS"
+
+else
+  as_fn_error $? "Could not find Kerberos library; install Kerberos or build with --disable-system-kerberos to use the default cache location." "$LINENO" 5
+fi
+
+          ac_fn_cxx_check_header_mongrel "$LINENO" "krb5.h" "ac_cv_header_krb5_h" "$ac_includes_default"
+if test "x$ac_cv_header_krb5_h" = xyes; then :
+
+else
+  as_fn_error $? "Could not find Kerberos header; install Kerberos or build with --disable-system-kerberos to use the default cache location." "$LINENO" 5
+fi
+
+
+      	  KRB5_LIBS="-lkrb5"
+      fi
+  else
+      USE_EXTERNAL_KRB5=false
+  fi
+
+
+  ###############################################################################
+  #
+  # Check for the PCSC libraries
+  #
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use the system libpcsclite installation" >&5
+$as_echo_n "checking whether to use the system libpcsclite installation... " >&6; }
+
+  # default is bundled
+  DEFAULT_SYSTEM_PCSC=no
+
+  # Check whether --enable-system-pcsc was given.
+if test "${enable_system_pcsc+set}" = set; then :
+  enableval=$enable_system_pcsc;
+    case "${enableval}" in
+      yes)
+        system_pcsc=yes
+        ;;
+      *)
+        system_pcsc=no
+        ;;
+    esac
+
+else
+
+    system_pcsc=${DEFAULT_SYSTEM_PCSC}
+
+fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $system_pcsc" >&5
+$as_echo "$system_pcsc" >&6; }
+
+  if test "x${system_pcsc}" = "xyes"; then
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for PCSC" >&5
+$as_echo_n "checking for PCSC... " >&6; }
+
+if test -n "$PCSC_CFLAGS"; then
+    pkg_cv_PCSC_CFLAGS="$PCSC_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libpcsclite\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libpcsclite") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PCSC_CFLAGS=`$PKG_CONFIG --cflags "libpcsclite" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$PCSC_LIBS"; then
+    pkg_cv_PCSC_LIBS="$PCSC_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libpcsclite\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libpcsclite") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_PCSC_LIBS=`$PKG_CONFIG --libs "libpcsclite" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        PCSC_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors "libpcsclite" 2>&1`
+        else
+	        PCSC_PKG_ERRORS=`$PKG_CONFIG --print-errors "libpcsclite" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$PCSC_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                PCSC_FOUND=no
+elif test $pkg_failed = untried; then
+	PCSC_FOUND=no
+else
+	PCSC_CFLAGS=$pkg_cv_PCSC_CFLAGS
+	PCSC_LIBS=$pkg_cv_PCSC_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	PCSC_FOUND=yes
+fi
+      if test "x${PCSC_FOUND}" = "xyes"; then
+	  USE_EXTERNAL_PCSC=true
+      else
+	  as_fn_error $? "--enable-system-pcsc specified, but libpcsclite not found." "$LINENO" 5
+      fi
+  else
+      USE_EXTERNAL_PCSC=false
+  fi
+
+
+  ###############################################################################
+  #
+  # Check for the SCTP libraries
+  #
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to use the system libsctp installation" >&5
+$as_echo_n "checking whether to use the system libsctp installation... " >&6; }
+
+  # default is bundled
+  DEFAULT_SYSTEM_SCTP=no
+
+  # Check whether --enable-system-sctp was given.
+if test "${enable_system_sctp+set}" = set; then :
+  enableval=$enable_system_sctp;
+    case "${enableval}" in
+      yes)
+        system_sctp=yes
+        ;;
+      *)
+        system_sctp=no
+        ;;
+    esac
+
+else
+
+    system_sctp=${DEFAULT_SYSTEM_SCTP}
+
+fi
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $system_sctp" >&5
+$as_echo "$system_sctp" >&6; }
+
+  if test "x${system_sctp}" = "xyes"; then
+            if test "x${SCTP_CFLAGS}" = "x"; then
+          ac_fn_cxx_check_header_mongrel "$LINENO" "netinet/sctp.h" "ac_cv_header_netinet_sctp_h" "$ac_includes_default"
+if test "x$ac_cv_header_netinet_sctp_h" = xyes; then :
+
+else
+  as_fn_error $? "Could not find SCTP header; install SCTP or build with --disable-system-sctp to use the in-tree copy." "$LINENO" 5
+fi
+
+
+      fi
+      if test "x${SCTP_LIBS}" = "x"; then
+          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sctp_bindx in -lsctp" >&5
+$as_echo_n "checking for sctp_bindx in -lsctp... " >&6; }
+if ${ac_cv_lib_sctp_sctp_bindx+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsctp  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char sctp_bindx ();
+int
+main ()
+{
+return sctp_bindx ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_sctp_sctp_bindx=yes
+else
+  ac_cv_lib_sctp_sctp_bindx=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_sctp_sctp_bindx" >&5
+$as_echo "$ac_cv_lib_sctp_sctp_bindx" >&6; }
+if test "x$ac_cv_lib_sctp_sctp_bindx" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBSCTP 1
+_ACEOF
+
+  LIBS="-lsctp $LIBS"
+
+else
+  as_fn_error $? "Could not find SCTP library; install SCTP or build with --disable-system-sctp to use the in-tree copy." "$LINENO" 5
+fi
+
+          SCTP_LIBS="-lsctp"
+      fi
+      USE_EXTERNAL_SCTP=true
+  else
+      USE_EXTERNAL_SCTP=false
+  fi
+
+
+
 
 
   ###############################################################################
@@ -53263,7 +54428,7 @@ $as_echo "$as_me: WARNING: --with-ccache-dir has no meaning when ccache is not e
     # precompiled headers.
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking if ccache supports precompiled headers" >&5
 $as_echo_n "checking if ccache supports precompiled headers... " >&6; }
-    HAS_GOOD_CCACHE=`($CCACHE --version | head -n 1 | grep -E 3.1.[456789]) 2> /dev/null`
+    HAS_GOOD_CCACHE=`($CCACHE --version | head -n 1 | grep -E "3\.(1\.[456789]|[2-9])") 2>&5`
     if test "x$HAS_GOOD_CCACHE" = x; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: result: no, disabling ccache" >&5
 $as_echo "no, disabling ccache" >&6; }

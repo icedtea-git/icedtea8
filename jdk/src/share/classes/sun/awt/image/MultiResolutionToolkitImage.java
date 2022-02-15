@@ -40,9 +40,22 @@ public class MultiResolutionToolkitImage extends ToolkitImage implements MultiRe
     }
 
     @Override
-    public Image getResolutionVariant(int width, int height) {
-        return ((width <= getWidth() && height <= getHeight()))
+    public Image getResolutionVariant(double destWidth, double destHeight) {
+        checkSize(destWidth, destHeight);
+        return ((destWidth <= getWidth() && destHeight <= getHeight()))
                 ? this : resolutionVariant;
+    }
+
+    private static void checkSize(double width, double height) {
+        if (width <= 0 || height <= 0) {
+            throw new IllegalArgumentException(String.format(
+                    "Width (%s) or height (%s) cannot be <= 0", width, height));
+        }
+
+        if (!Double.isFinite(width) || !Double.isFinite(height)) {
+            throw new IllegalArgumentException(String.format(
+                    "Width (%s) or height (%s) is not finite", width, height));
+        }
     }
 
     public Image getResolutionVariant() {

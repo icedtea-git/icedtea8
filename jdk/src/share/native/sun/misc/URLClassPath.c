@@ -38,6 +38,10 @@ extern jboolean VerifyFixClassname(char *utf_name);
 
 #include "sun_misc_URLClassPath.h"
 
+/* defined in libverify.so/verify.dll (src file common/check_format.c) */
+extern jboolean VerifyClassname(char *utf_name, jboolean arrayAllowed);
+extern jboolean VerifyFixClassname(char *utf_name);
+
 extern char*
 getUTF(JNIEnv *env, jstring str, char* localBuf, int bufSize);
 

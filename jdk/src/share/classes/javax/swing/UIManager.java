@@ -609,8 +609,9 @@ public class UIManager implements Serializable
         } else {
             String desktop = AccessController.doPrivileged(new GetPropertyAction("sun.desktop"));
             Toolkit toolkit = Toolkit.getDefaultToolkit();
-            if ("gnome".equals(desktop) &&
-                    toolkit instanceof SunToolkit &&
+            boolean gtkDesktop = "gnome".equals(desktop) ||
+              (osType == OSInfo.OSType.LINUX && SwingUtilities2.isLocalDisplay());
+            if (gtkDesktop && toolkit instanceof SunToolkit &&
                     ((SunToolkit) toolkit).isNativeGTKAvailable()) {
                 // May be set on Linux and Solaris boxs.
                 return "com.sun.java.swing.plaf.gtk.GTKLookAndFeel";

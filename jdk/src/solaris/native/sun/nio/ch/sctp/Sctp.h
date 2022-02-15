@@ -74,17 +74,18 @@ typedef int sctp_peeloff_func(int sock, sctp_assoc_t id);
 #include <netinet/in.h>
 #include "jni.h"
 
-//Causes compiler error if not found, should make warning and uncomment
-/*#include <netinet/sctp.h>*/
-
-#ifndef IPPROTO_SCTP
-#define IPPROTO_SCTP    132
-#endif
-
 /* The current version of lksctp does
  * not define the following option that the Java API (optionally) supports */
 #ifndef SCTP_EXPLICIT_EOR
 #define SCTP_EXPLICIT_EOR -1
+#endif
+
+#ifdef USE_SYSTEM_SCTP
+#include <netinet/sctp.h>
+#else
+
+#ifndef IPPROTO_SCTP
+#define IPPROTO_SCTP    132
 #endif
 
 /* Definitions taken from lksctp-tools-1.0.8/src/include/netinet/sctp.h */
@@ -319,15 +320,25 @@ typedef int sctp_freepaddrs_func(struct sockaddr *addrs);
 typedef int sctp_bindx_func(int sd, struct sockaddr *addrs, int addrcnt, int flags);
 typedef int sctp_peeloff_func(int sock, sctp_assoc_t id);
 
+#endif
 
 #endif /* __linux__ */
 
+#ifdef USE_SYSTEM_SCTP
+#define nio_sctp_getladdrs sctp_getladdrs
+#define nio_sctp_freeladdrs sctp_freeladdrs
+#define nio_sctp_getpaddrs sctp_getpaddrs
+#define nio_sctp_freepaddrs sctp_freepaddrs
+#define nio_sctp_bindx sctp_bindx
+#define nio_sctp_peeloff sctp_peeloff
+#else
 extern sctp_getladdrs_func* nio_sctp_getladdrs;
 extern sctp_freeladdrs_func* nio_sctp_freeladdrs;
 extern sctp_getpaddrs_func* nio_sctp_getpaddrs;
 extern sctp_freepaddrs_func* nio_sctp_freepaddrs;
 extern sctp_bindx_func* nio_sctp_bindx;
 extern sctp_peeloff_func* nio_sctp_peeloff;
+#endif
 
 jboolean loadSocketExtensionFuncs(JNIEnv* env);
 

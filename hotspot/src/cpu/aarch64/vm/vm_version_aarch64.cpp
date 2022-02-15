@@ -314,6 +314,11 @@ void VM_Version::get_processor_features() {
     UsePopCountInstruction = true;
   }
 
+  // This machine allows unaligned memory accesses
+  if (FLAG_IS_DEFAULT(UseUnalignedAccesses)) {
+    FLAG_SET_DEFAULT(UseUnalignedAccesses, true);
+  }
+
   if (FLAG_IS_DEFAULT(UseMontgomeryMultiplyIntrinsic)) {
     UseMontgomeryMultiplyIntrinsic = true;
   }

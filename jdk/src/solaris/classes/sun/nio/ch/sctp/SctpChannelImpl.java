@@ -1113,7 +1113,7 @@ public class SctpChannelImpl extends SctpChannel
         java.security.AccessController.doPrivileged(
             new java.security.PrivilegedAction<Void>() {
                 public Void run() {
-                    System.loadLibrary("sctp");
+                    System.loadLibrary("j2sctp");
                     return null;
                 }
             });

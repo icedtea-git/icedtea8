@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,54 +28,54 @@ import java.awt.Image;
 import java.util.List;
 
 /**
- * This interface is designed to provide a set of images at various resolutions.
+ * This interface is designed to be an optional additional API supported by
+ * some implementations of {@link java.awt.Image} to allow them to provide
+ * alternate images for various rendering resolutions. The various
+ * {@code Graphics.drawImage(...)} variant methods will consult the methods
+ * of this interface if it is implemented on the argument {@code Image} object
+ * in order to choose the best representation to use for each rendering operation.
+ * <p>
+ * The {@code MultiResolutionImage} interface should be implemented by any
+ * subclass of {@code java.awt.Image} whose instances are intended to provide
+ * image resolution variants according to the given image width and height.
+ * For convenience, toolkit images obtained from
+ * {@code Toolkit.getImage(String name)} and {@code Toolkit.getImage(URL url)}
+ * will implement this interface on platforms that support naming conventions
+ * for resolution variants of stored image media and the
+ * {@code AbstractMultiResolutionImage} and {@code BaseMultiResolutionImage}
+ * classes are provided to facilitate easy construction of custom multi-resolution
+ * images from a list of related images.
  *
- * The <code>MultiResolutionImage</code> interface should be implemented by any
- * class whose instances are intended to provide image resolution variants
- * according to the given image width and height.
+ * @see java.awt.Image
+ * @see sun.awt.image.AbstractMultiResolutionImage
+ * @see sun.awt.image.BaseMultiResolutionImage
+ * @see java.awt.Toolkit#getImage(java.lang.String filename)
+ * @see java.awt.Toolkit#getImage(java.net.URL url)
  *
- * For example,
- * <pre>
- * {@code
- *  public class ScaledImage extends BufferedImage
- *         implements MultiResolutionImage {
- *
- *    @Override
- *    public Image getResolutionVariant(int width, int height) {
- *      return ((width <= getWidth() && height <= getHeight()))
- *             ? this : highResolutionImage;
- *    }
- *
- *    @Override
- *    public List<Image> getResolutionVariants() {
- *        return Arrays.asList(this, highResolutionImage);
- *    }
- *  }
- * }</pre>
- *
- * It is recommended to cache image variants for performance reasons.
- *
- * <b>WARNING</b>: This class is an implementation detail. This API may change
- * between update release, and it may even be removed or be moved in some other
- * package(s)/class(es).
  */
 public interface MultiResolutionImage {
 
     /**
-     * Provides an image with necessary resolution which best fits to the given
-     * image width and height.
+     * Gets a specific image that is the best variant to represent
+     * this logical image at the indicated size.
      *
-     * @param width the desired image resolution width.
-     * @param height the desired image resolution height.
+     * @param destImageWidth the width of the destination image, in pixels.
+     * @param destImageHeight the height of the destination image, in pixels.
      * @return image resolution variant.
+     * @throws IllegalArgumentException if {@code destImageWidth} or
+     *         {@code destImageHeight} is less than or equal to zero, infinity,
+     *         or NaN.
      *
      * @since JDK1.8
      */
-    public Image getResolutionVariant(int width, int height);
+    Image getResolutionVariant(double destImageWidth, double destImageHeight);
 
     /**
-     * Gets list of all resolution variants including the base image
-     *
+     * Gets a readable list of all resolution variants.
+     * The list must be nonempty and contain at least one resolution variant.
+     * <p>
+     * Note that many implementations might return an unmodifiable list.
+     * <p>
      * @return list of resolution variants.
      * @since JDK1.8
      */

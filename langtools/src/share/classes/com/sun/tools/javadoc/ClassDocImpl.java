@@ -962,9 +962,8 @@ public class ClassDocImpl extends ProgramElementDocImpl implements ClassDoc {
         }
 
         // search interfaces
-        ClassDoc intf[] = interfaces();
-        for (int i = 0; i < intf.length; i++) {
-            cdi = (ClassDocImpl)intf[i];
+        for (ClassDoc intf : interfaces()) {
+            cdi = (ClassDocImpl) intf;
             mdi = cdi.searchMethod(methodName, paramTypes, searched);
             if (mdi != null) {
                 return mdi;
@@ -1071,9 +1070,8 @@ public class ClassDocImpl extends ProgramElementDocImpl implements ClassDoc {
         }
 
         // search interfaces
-        ClassDoc intf[] = interfaces();
-        for (int i = 0; i < intf.length; i++) {
-            cdi = (ClassDocImpl)intf[i];
+        for (ClassDoc intf : interfaces()) {
+            cdi = (ClassDocImpl) intf;
             FieldDocImpl fdi = cdi.searchField(fieldName, searched);
             if (fdi != null) {
                 return fdi;

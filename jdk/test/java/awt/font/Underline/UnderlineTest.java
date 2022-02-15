@@ -89,7 +89,7 @@ public class UnderlineTest {
     }
 
     public static void main(String args[]) {
-        String fontName = "Lucida Sans";
+        String fontName = Font.DIALOG;
         if (args.length > 0) {
             fontName = args[0];
         }

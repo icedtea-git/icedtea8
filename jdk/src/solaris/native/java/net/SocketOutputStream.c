@@ -22,15 +22,10 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-#include <stdlib.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 
-#include "jni_util.h"
-#include "jvm.h"
 #include "net_util.h"
 
 #include "java_net_SocketOutputStream.h"
@@ -113,16 +108,12 @@ Java_java_net_SocketOutputStream_socketWrite0(JNIEnv *env, jobject this,
                     loff += n;
                     continue;
                 }
-                if (n == JVM_IO_INTR) {
-                    JNU_ThrowByName(env, "java/io/InterruptedIOException", 0);
+		if (errno == ECONNRESET) {
+		    JNU_ThrowByName(env, "sun/net/ConnectionResetException",
+				    "Connection reset");
                 } else {
-                    if (errno == ECONNRESET) {
-                        JNU_ThrowByName(env, "sun/net/ConnectionResetException",
-                            "Connection reset");
-                    } else {
-                        NET_ThrowByNameWithLastError(env, "java/net/SocketException",
-                            "Write failed");
-                    }
+		    NET_ThrowByNameWithLastError(env, "java/net/SocketException",
+						 "Write failed");
                 }
                 if (bufP != BUF) {
                     free(bufP);

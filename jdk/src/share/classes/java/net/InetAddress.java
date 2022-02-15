@@ -42,6 +42,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectInputStream.GetField;
 import java.io.ObjectOutputStream;
 import java.io.ObjectOutputStream.PutField;
+import java.lang.annotation.Native;
 import sun.security.action.*;
 import sun.net.InetAddressCachePolicy;
 import sun.net.util.IPAddressUtil;
@@ -192,13 +193,13 @@ class InetAddress implements java.io.Serializable {
      * Specify the address family: Internet Protocol, Version 4
      * @since 1.4
      */
-    static final int IPv4 = 1;
+    @Native static final int IPv4 = 1;
 
     /**
      * Specify the address family: Internet Protocol, Version 6
      * @since 1.4
      */
-    static final int IPv6 = 2;
+    @Native static final int IPv6 = 2;
 
     /* Specify address family preference */
     static transient boolean preferIPv6Address = false;

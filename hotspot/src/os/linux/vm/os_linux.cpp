@@ -103,6 +103,8 @@
 # include <inttypes.h>
 # include <sys/ioctl.h>
 
+#include <sys/prctl.h>
+
 PRAGMA_FORMAT_MUTE_WARNINGS_FOR_GCC
 
 #ifndef _GNU_SOURCE
@@ -4944,8 +4946,9 @@ typedef int (*os_sigaction_t)(int, const struct sigaction *, struct sigaction *)
 static os_sigaction_t os_sigaction = NULL;
 
 void os::Linux::check_signal_handler(int sig) {
-  char buf[O_BUFLEN];
+  char buf[O_BUFLEN], enbuf[O_BUFLEN];
   address jvmHandler = NULL;
+  const char* exname = os::exception_name(sig, enbuf, O_BUFLEN);
 
 
   struct sigaction act;
@@ -4996,7 +4999,7 @@ void os::Linux::check_signal_handler(int sig) {
   }
 
   if (thisHandler != jvmHandler) {
-    tty->print("Warning: %s handler ", exception_name(sig, buf, O_BUFLEN));
+    tty->print("Warning: %s handler ", exname == NULL ? "(null)" : exname);
     tty->print("expected:%s", get_signal_handler_name(jvmHandler, buf, O_BUFLEN));
     tty->print_cr("  found:%s", get_signal_handler_name(thisHandler, buf, O_BUFLEN));
     // No need to check this sig any longer
@@ -5004,10 +5007,10 @@ void os::Linux::check_signal_handler(int sig) {
     // Running under non-interactive shell, SHUTDOWN2_SIGNAL will be reassigned SIG_IGN
     if (sig == SHUTDOWN2_SIGNAL && !isatty(fileno(stdin))) {
       tty->print_cr("Running in non-interactive shell, %s handler is replaced by shell",
-                    exception_name(sig, buf, O_BUFLEN));
+                    exname == NULL ? "(null)" : exname);
     }
   } else if(os::Linux::get_our_sigflags(sig) != 0 && (int)act.sa_flags != os::Linux::get_our_sigflags(sig)) {
-    tty->print("Warning: %s handler flags ", exception_name(sig, buf, O_BUFLEN));
+    tty->print("Warning: %s handler flags ", exname == NULL ? "(null)" : exname);
     tty->print("expected:" PTR32_FORMAT, os::Linux::get_our_sigflags(sig));
     tty->print_cr("  found:" PTR32_FORMAT, act.sa_flags);
     // No need to check this sig any longer
@@ -5034,6 +5037,48 @@ const char* os::exception_name(int exception_code, char* buf, size_t size) {
   } else {
     return NULL;
   }
+}
+
+/* Per task speculation control */
+#ifndef PR_GET_SPECULATION_CTRL
+# define PR_GET_SPECULATION_CTRL    52
+#endif
+#ifndef PR_SET_SPECULATION_CTRL
+# define PR_SET_SPECULATION_CTRL    53
+#endif
+/* Speculation control variants */
+#ifndef PR_SPEC_STORE_BYPASS
+# define PR_SPEC_STORE_BYPASS          0
+#endif
+/* Return and control values for PR_SET/GET_SPECULATION_CTRL */
+
+#ifndef PR_SPEC_NOT_AFFECTED
+# define PR_SPEC_NOT_AFFECTED          0
+#endif
+#ifndef PR_SPEC_PRCTL
+# define PR_SPEC_PRCTL                 (1UL << 0)
+#endif
+#ifndef PR_SPEC_ENABLE
+# define PR_SPEC_ENABLE                (1UL << 1)
+#endif
+#ifndef PR_SPEC_DISABLE
+# define PR_SPEC_DISABLE               (1UL << 2)
+#endif
+#ifndef PR_SPEC_FORCE_DISABLE
+# define PR_SPEC_FORCE_DISABLE         (1UL << 3)
+#endif
+#ifndef PR_SPEC_DISABLE_NOEXEC
+# define PR_SPEC_DISABLE_NOEXEC        (1UL << 4)
+#endif
+
+static void set_speculation() __attribute__((constructor));
+static void set_speculation() {
+  if ( prctl(PR_SET_SPECULATION_CTRL,
+             PR_SPEC_STORE_BYPASS,
+             PR_SPEC_DISABLE_NOEXEC, 0, 0) == 0 ) {
+    return;
+  }
+  prctl(PR_SET_SPECULATION_CTRL, PR_SPEC_STORE_BYPASS, PR_SPEC_DISABLE, 0, 0);
 }
 
 // this is called _before_ most of the global arguments have been parsed
@@ -5572,11 +5617,41 @@ int os::open(const char *path, int oflag, int mode) {
     errno = ENAMETOOLONG;
     return -1;
   }
-  int fd;
   int o_delete = (oflag & O_DELETE);
   oflag = oflag & ~O_DELETE;
 
-  fd = ::open64(path, oflag, mode);
+
+    /* All file descriptors that are opened in the Java process and not
+     * specifically destined for a subprocess should have the close-on-exec
+     * flag set.  If we don't set it, then careless 3rd party native code
+     * might fork and exec without closing all appropriate file descriptors
+     * (e.g. as we do in closeDescriptors in UNIXProcess.c), and this in
+     * turn might:
+     *
+     * - cause end-of-file to fail to be detected on some file
+     *   descriptors, resulting in mysterious hangs, or
+     *
+     * - might cause an fopen in the subprocess to fail on a system
+     *   suffering from bug 1085341.
+     *
+     * (Yes, the default setting of the close-on-exec flag is a Unix
+     * design flaw)
+     *
+     * See:
+     * 1085341: 32-bit stdio routines should support file descriptors >255
+     * 4843136: (process) pipe file descriptor from Runtime.exec not being closed
+     * 6339493: (process) Runtime.exec does not close all file descriptors on Solaris 9
+     */
+  // Modern Linux kernels (after 2.6.23 2007) support O_CLOEXEC with open().
+  // O_CLOEXEC is preferable to using FD_CLOEXEC on an open file descriptor
+  // because it saves a system call and removes a small window where the flag
+  // is unset.  On ancient Linux kernels the O_CLOEXEC flag will be ignored
+  // and we fall back to using FD_CLOEXEC (see below).
+#ifdef O_CLOEXEC
+  oflag |= O_CLOEXEC;
+#endif
+
+  int fd = ::open64(path, oflag, mode);
   if (fd == -1) return -1;
 
   //If the open succeeded, the file might still be a directory
@@ -5597,34 +5672,19 @@ int os::open(const char *path, int oflag, int mode) {
     }
   }
 
-    /*
-     * All file descriptors that are opened in the JVM and not
-     * specifically destined for a subprocess should have the
-     * close-on-exec flag set.  If we don't set it, then careless 3rd
-     * party native code might fork and exec without closing all
-     * appropriate file descriptors (e.g. as we do in closeDescriptors in
-     * UNIXProcess.c), and this in turn might:
-     *
-     * - cause end-of-file to fail to be detected on some file
-     *   descriptors, resulting in mysterious hangs, or
-     *
-     * - might cause an fopen in the subprocess to fail on a system
-     *   suffering from bug 1085341.
-     *
-     * (Yes, the default setting of the close-on-exec flag is a Unix
-     * design flaw)
-     *
-     * See:
-     * 1085341: 32-bit stdio routines should support file descriptors >255
-     * 4843136: (process) pipe file descriptor from Runtime.exec not being closed
-     * 6339493: (process) Runtime.exec does not close all file descriptors on Solaris 9
-     */
 #ifdef FD_CLOEXEC
-    {
-        int flags = ::fcntl(fd, F_GETFD);
-        if (flags != -1)
-            ::fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
+  // Validate that the use of the O_CLOEXEC flag on open above worked.
+  // With recent kernels, we will perform this check exactly once.
+  static sig_atomic_t O_CLOEXEC_is_known_to_work = 0;
+  if (!O_CLOEXEC_is_known_to_work) {
+    int flags = ::fcntl(fd, F_GETFD);
+    if (flags != -1) {
+      if ((flags & FD_CLOEXEC) != 0)
+        O_CLOEXEC_is_known_to_work = 1;
+      else
+	::fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
     }
+  }
 #endif
 
   if (o_delete != 0) {

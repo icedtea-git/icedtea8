@@ -339,6 +339,21 @@ define SetupNativeCompilation
     $1_EXTRA_CXXFLAGS+=$$($1_CXXFLAGS_$(OPENJDK_TARGET_OS)_release)
   endif
 
+  $1_EXTRA_ASFLAGS:=$$($1_ASFLAGS_$(OPENJDK_TARGET_OS_API)) $$($1_ASFLAGS_$(OPENJDK_TARGET_OS)) \
+      $$($1_ASFLAGS_$(OPENJDK_TARGET_OS)_$(OPENJDK_TARGET_CPU))
+  ifneq ($(DEBUG_LEVEL),release)
+    # Pickup extra debug dependent variables for ASFLAGS
+    $1_EXTRA_ASFLAGS+=$$($1_ASFLAGS_debug)
+    $1_EXTRA_ASFLAGS+=$$($1_ASFLAGS_$(OPENJDK_TARGET_OS_API)_debug)
+    $1_EXTRA_ASFLAGS+=$$($1_ASFLAGS_$(OPENJDK_TARGET_OS)_debug)
+    $1_EXTRA_ASFLAGS+=$$($1_ASFLAGS_$(OPENJDK_TARGET_OS)_$(OPENJDK_TARGET_CPU)_debug)
+  else
+    $1_EXTRA_ASFLAGS+=$$($1_ASFLAGS_release)
+    $1_EXTRA_ASFLAGS+=$$($1_ASFLAGS_$(OPENJDK_TARGET_OS_API)_release)
+    $1_EXTRA_ASFLAGS+=$$($1_ASFLAGS_$(OPENJDK_TARGET_OS)_release)
+    $1_EXTRA_ASFLAGS+=$$($1_ASFLAGS_$(OPENJDK_TARGET_OS)_$(OPENJDK_TARGET_CPU)_release)
+  endif
+
   ifeq ($$($1_CXXFLAGS),)
     $1_CXXFLAGS:=$$($1_CFLAGS)
   endif
@@ -352,12 +367,14 @@ define SetupNativeCompilation
         # Always add debug symbols
         $1_EXTRA_CFLAGS+=$(CFLAGS_DEBUG_SYMBOLS)
         $1_EXTRA_CXXFLAGS+=$(CXXFLAGS_DEBUG_SYMBOLS)
+        $1_EXTRA_ASFLAGS+=$(ASFLAGS_DEBUG_SYMBOLS)
       else
         # Programs don't get the debug symbols added in the old build. It's not clear if
         # this is intentional.
         ifeq ($$($1_PROGRAM),)
           $1_EXTRA_CFLAGS+=$(CFLAGS_DEBUG_SYMBOLS)
           $1_EXTRA_CXXFLAGS+=$(CXXFLAGS_DEBUG_SYMBOLS)
+          $1_EXTRA_ASFLAGS+=$(ASFLAGS_DEBUG_SYMBOLS)
         endif
       endif
     endif
@@ -366,6 +383,21 @@ define SetupNativeCompilation
   ifneq (,$$($1_REORDER))
     $1_EXTRA_CFLAGS += $$(C_FLAG_REORDER)
     $1_EXTRA_CXXFLAGS += $$(CXX_FLAG_REORDER)
+  endif
+
+  # Check if warnings should be considered errors.
+  # Pick first binary and toolchain specific, then binary specific, then general setting.
+  ifeq ($$($1_WARNINGS_AS_ERRORS_$(TOOLCHAIN_TYPE)),)
+    ifeq ($$($1_WARNINGS_AS_ERRORS),)
+      $1_WARNINGS_AS_ERRORS_$(TOOLCHAIN_TYPE) := $$(WARNINGS_AS_ERRORS)
+    else
+      $1_WARNINGS_AS_ERRORS_$(TOOLCHAIN_TYPE) := $$($1_WARNINGS_AS_ERRORS)
+    endif
+  endif
+
+  ifeq ($$($1_WARNINGS_AS_ERRORS), true)
+    $1_EXTRA_CFLAGS += $(CFLAGS_WARNINGS_ARE_ERRORS)
+    $1_EXTRA_CXXFLAGS += $(CFLAGS_WARNINGS_ARE_ERRORS)
   endif
 
   ifeq (NONE, $$($1_OPTIMIZATION))
@@ -392,7 +424,7 @@ define SetupNativeCompilation
   $$(foreach p,$$($1_SRCS), \
       $$(eval $$(call add_native_source,$1,$$p,$$($1_OBJECT_DIR), \
           $$($1_CFLAGS) $$($1_EXTRA_CFLAGS),$$($1_CC), \
-          $$($1_CXXFLAGS) $$($1_EXTRA_CXXFLAGS),$(CXX),$$($1_ASFLAGS))))
+          $$($1_CXXFLAGS) $$($1_EXTRA_CXXFLAGS),$(CXX),$$($1_EXTRA_ASFLAGS))))
 
   # On windows we need to create a resource file
   ifeq ($(OPENJDK_TARGET_OS), windows)

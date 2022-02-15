@@ -104,8 +104,7 @@ public class JDialog extends Dialog implements WindowConstants,
      * Key into the AppContext, used to check if should provide decorations
      * by default.
      */
-    private static final Object defaultLookAndFeelDecoratedKey =
-            new StringBuffer("JDialog.defaultLookAndFeelDecorated");
+    private static final Object defaultLookAndFeelDecoratedKey = new Object(); // JDialog.defaultLookAndFeelDecorated
 
     private int defaultCloseOperation = HIDE_ON_CLOSE;
 

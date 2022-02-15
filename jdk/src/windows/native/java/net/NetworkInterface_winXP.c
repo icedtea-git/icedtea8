@@ -22,19 +22,10 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-#include <stdlib.h>
-#include <windows.h>
-#include <winsock2.h>           /* needed for htonl */
-#include <iprtrmib.h>
-#include <assert.h>
-#include <limits.h>
+#include "net_util.h"
+#include "NetworkInterface.h"
 
 #include "java_net_NetworkInterface.h"
-#include "jni_util.h"
-
-#include "NetworkInterface.h"
-#include "net_util.h"
 
 /*
  * Windows implementation of the java.net.NetworkInterface native methods.
@@ -580,13 +571,12 @@ static jobject createNetworkInterfaceXP(JNIEnv *env, netif *ifs)
             (*env)->SetObjectArrayElement(env, bindsArr, bind_index++, ibObj);
         } else /* AF_INET6 */ {
             int scope;
-            int ret;
             iaObj = (*env)->NewObject(env, ia6_class, ia6_ctrID);
             if (iaObj == NULL) {
                 free_netaddr(netaddrPToFree);
                 return NULL;
             }
-            ret = setInet6Address_ipaddress(env, iaObj, (jbyte *)&(addrs->addr.him6.sin6_addr.s6_addr));
+            jboolean ret = setInet6Address_ipaddress(env, iaObj, (jbyte *)&(addrs->addr.him6.sin6_addr.s6_addr));
             if (ret == JNI_FALSE) {
                 free_netaddr(netaddrPToFree);
                 return NULL;

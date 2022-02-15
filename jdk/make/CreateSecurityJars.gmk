@@ -1,5 +1,6 @@
 #
 # Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2016, Red Hat Inc.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -178,6 +179,8 @@ TARGETS += $(JCE_JAR_DST)
 
 ##########################################################################################
 
+POLICY_CREATION_DATE := 200712010000
+
 US_EXPORT_POLICY_JAR_UNLIMITED_DST := \
     $(JDK_OUTPUTDIR)/lib/security/policy/unlimited/US_export_policy.jar
 US_EXPORT_POLICY_JAR_LIMITED_DST := \
@@ -201,22 +204,33 @@ ifneq ($(BUILD_CRYPTO), no)
   US_EXPORT_POLICY_JAR_SRC_DIR := $(JDK_TOPDIR)/make/data/cryptopolicy/unlimited
   US_EXPORT_POLICY_JAR_TMP := \
       $(JDK_OUTPUTDIR)/jce/unsigned/policy/unlimited/US_export_policy_jar.tmp
+  US_EXPORT_POLICY_JAR_MANIFEST_FILE := \
+      $(US_EXPORT_POLICY_JAR_TMP)/META-INF/MANIFEST.MF
 
   $(US_EXPORT_POLICY_JAR_TMP)/%: $(US_EXPORT_POLICY_JAR_SRC_DIR)/%
 	$(install-file)
+	$(TOUCH) -t $(POLICY_CREATION_DATE) $@
 
-  US_EXPORT_POLICY_JAR_DEPS := $(US_EXPORT_POLICY_JAR_TMP)/default_US_export.policy
+  US_EXPORT_POLICY_JAR_POLICIES := $(US_EXPORT_POLICY_JAR_TMP)/default_US_export.policy
+  
+  $(US_EXPORT_POLICY_JAR_MANIFEST_FILE): $(US_EXPORT_POLICY_JAR_POLICIES)
+	$(MKDIR) -p $(US_EXPORT_POLICY_JAR_TMP)/META-INF
+	$(ECHO) "Manifest-Version: 1.0" > $@
+	$(ECHO) "Crypto-Strength: unlimited" >> $@
+	$(TOUCH) -r $(US_EXPORT_POLICY_JAR_TMP)/default_US_export.policy \
+	    $(US_EXPORT_POLICY_JAR_TMP)/META-INF
+	$(TOUCH) -r $(US_EXPORT_POLICY_JAR_TMP)/META-INF $@
+	
+  US_EXPORT_POLICY_JAR_DEPS := $(US_EXPORT_POLICY_JAR_POLICIES) $(US_EXPORT_POLICY_JAR_MANIFEST_FILE)
 
-  $(eval $(call SetupArchive,BUILD_US_EXPORT_POLICY_JAR, $(US_EXPORT_POLICY_JAR_DEPS), \
-      SRCS := $(US_EXPORT_POLICY_JAR_TMP), \
-      SUFFIXES := .policy, \
-      JAR := $(US_EXPORT_POLICY_JAR_UNLIMITED_UNSIGNED), \
-      EXTRA_MANIFEST_ATTR := Crypto-Strength: unlimited, \
-      SKIP_METAINF := true))
+  $(US_EXPORT_POLICY_JAR_UNLIMITED_UNSIGNED): $(US_EXPORT_POLICY_JAR_DEPS)
+	( $(CD) $(US_EXPORT_POLICY_JAR_TMP) && $(ZIP) -Xr $@ META-INF *.policy )
+	$(TOUCH) -r $(US_EXPORT_POLICY_JAR_MANIFEST_FILE) $@
 
   $(US_EXPORT_POLICY_JAR_LIMITED_UNSIGNED): $(US_EXPORT_POLICY_JAR_UNLIMITED_UNSIGNED)
 	$(ECHO) $(LOG_INFO) Copying unlimited $(patsubst $(OUTPUT_ROOT)/%,%,$@)
 	$(install-file)
+	$(TOUCH) -r $(US_EXPORT_POLICY_JAR_UNLIMITED_UNSIGNED) $@
 
   TARGETS += $(US_EXPORT_POLICY_JAR_LIMITED_UNSIGNED) \
       $(US_EXPORT_POLICY_JAR_UNLIMITED_UNSIGNED)
@@ -260,31 +274,55 @@ ifneq ($(BUILD_CRYPTO), no)
   #
   LOCAL_POLICY_JAR_LIMITED_TMP := \
       $(JDK_OUTPUTDIR)/jce/unsigned/policy/limited/local_policy_jar.tmp
+  LOCAL_POLICY_JAR_LIMITED_MANIFEST_FILE := \
+      $(LOCAL_POLICY_JAR_LIMITED_TMP)/META-INF/MANIFEST.MF
   LOCAL_POLICY_JAR_UNLIMITED_TMP := \
       $(JDK_OUTPUTDIR)/jce/unsigned/policy/unlimited/local_policy_jar.tmp
+  LOCAL_POLICY_JAR_UNLIMITED_MANIFEST_FILE := \
+      $(LOCAL_POLICY_JAR_UNLIMITED_TMP)/META-INF/MANIFEST.MF
 
   $(LOCAL_POLICY_JAR_LIMITED_TMP)/%: $(JDK_TOPDIR)/make/data/cryptopolicy/limited/%
 	$(install-file)
+	$(TOUCH) -t $(POLICY_CREATION_DATE) $@
+
+  LOCAL_POLICY_JAR_LIMITED_POLICIES := $(LOCAL_POLICY_JAR_LIMITED_TMP)/exempt_local.policy \
+      $(LOCAL_POLICY_JAR_LIMITED_TMP)/default_local.policy
+
+  $(LOCAL_POLICY_JAR_LIMITED_MANIFEST_FILE): $(LOCAL_POLICY_JAR_LIMITED_POLICIES)
+	$(MKDIR) -p $(LOCAL_POLICY_JAR_LIMITED_TMP)/META-INF
+	$(ECHO) "Manifest-Version: 1.0" > $@
+	$(ECHO) "Crypto-Strength: limited" >> $@
+	$(TOUCH) -r $(LOCAL_POLICY_JAR_LIMITED_TMP)/exempt_local.policy \
+	    $(LOCAL_POLICY_JAR_LIMITED_TMP)/META-INF
+	$(TOUCH) -r $(LOCAL_POLICY_JAR_LIMITED_TMP)/META-INF $@
+
+  LOCAL_POLICY_JAR_LIMITED_DEPS := $(LOCAL_POLICY_JAR_LIMITED_POLICIES) \
+      $(LOCAL_POLICY_JAR_LIMITED_MANIFEST_FILE)
+      
+  $(LOCAL_POLICY_JAR_LIMITED_UNSIGNED): $(LOCAL_POLICY_JAR_LIMITED_DEPS)
+	( $(CD) $(LOCAL_POLICY_JAR_LIMITED_TMP) && $(ZIP) -Xr $@ META-INF *.policy )
+	$(TOUCH) -r $(LOCAL_POLICY_JAR_LIMITED_MANIFEST_FILE) $@
 
   $(LOCAL_POLICY_JAR_UNLIMITED_TMP)/%: $(JDK_TOPDIR)/make/data/cryptopolicy/unlimited/%
 	$(install-file)
+	$(TOUCH) -t $(POLICY_CREATION_DATE) $@
 
-  $(eval $(call SetupArchive,BUILD_LOCAL_POLICY_JAR_LIMITED, \
-      $(LOCAL_POLICY_JAR_LIMITED_TMP)/exempt_local.policy \
-      $(LOCAL_POLICY_JAR_LIMITED_TMP)/default_local.policy, \
-      SRCS := $(LOCAL_POLICY_JAR_LIMITED_TMP), \
-      SUFFIXES := .policy, \
-      JAR := $(LOCAL_POLICY_JAR_LIMITED_UNSIGNED), \
-      EXTRA_MANIFEST_ATTR := Crypto-Strength: limited, \
-      SKIP_METAINF := true))
+  LOCAL_POLICY_JAR_UNLIMITED_POLICIES := $(LOCAL_POLICY_JAR_UNLIMITED_TMP)/default_local.policy
+  
+  $(LOCAL_POLICY_JAR_UNLIMITED_MANIFEST_FILE): $(LOCAL_POLICY_JAR_UNLIMITED_POLICIES)
+	$(MKDIR) -p $(LOCAL_POLICY_JAR_UNLIMITED_TMP)/META-INF
+	$(ECHO) "Manifest-Version: 1.0" > $@
+	$(ECHO) "Crypto-Strength: unlimited" >> $@
+	$(TOUCH) -r $(LOCAL_POLICY_JAR_UNLIMITED_TMP)/default_local.policy \
+	    $(LOCAL_POLICY_JAR_UNLIMITED_TMP)/META-INF
+	$(TOUCH) -r $(LOCAL_POLICY_JAR_UNLIMITED_TMP)/META-INF $@
 
-  $(eval $(call SetupArchive,BUILD_LOCAL_POLICY_JAR_UNLIMITED, \
-      $(LOCAL_POLICY_JAR_UNLIMITED_TMP)/default_local.policy, \
-      SRCS := $(LOCAL_POLICY_JAR_UNLIMITED_TMP), \
-      SUFFIXES := .policy, \
-      JAR := $(LOCAL_POLICY_JAR_UNLIMITED_UNSIGNED), \
-      EXTRA_MANIFEST_ATTR := Crypto-Strength: unlimited, \
-      SKIP_METAINF := true))
+  LOCAL_POLICY_JAR_UNLIMITED_DEPS := $(LOCAL_POLICY_JAR_UNLIMITED_POLICIES) \
+      $(LOCAL_POLICY_JAR_UNLIMITED_MANIFEST_FILE)
+      
+  $(LOCAL_POLICY_JAR_UNLIMITED_UNSIGNED): $(LOCAL_POLICY_JAR_UNLIMITED_DEPS)
+	( $(CD) $(LOCAL_POLICY_JAR_UNLIMITED_TMP) && $(ZIP) -Xr $@ META-INF *.policy )
+	$(TOUCH) -r $(LOCAL_POLICY_JAR_UNLIMITED_MANIFEST_FILE) $@
 
   TARGETS += $(LOCAL_POLICY_JAR_LIMITED_UNSIGNED) $(LOCAL_POLICY_JAR_UNLIMITED_UNSIGNED)
 

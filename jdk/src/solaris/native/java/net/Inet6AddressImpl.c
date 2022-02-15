@@ -22,29 +22,21 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
+#include <ctype.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>
-#include <string.h>
-#include <strings.h>
-#include <stdlib.h>
-#include <ctype.h>
-#ifdef MACOSX
+#include <netinet/icmp6.h>
+
+#if defined(_ALLBSD_SOURCE)
 #include <ifaddrs.h>
 #include <net/if.h>
-#include <unistd.h> /* gethostname */
 #endif
 
-#include "jvm.h"
-#include "jni_util.h"
 #include "net_util.h"
-#ifndef IPV6_DEFS_H
-#include <netinet/icmp6.h>
-#endif
 
 #include "java_net_Inet4AddressImpl.h"
 #include "java_net_Inet6AddressImpl.h"
@@ -66,10 +58,12 @@
  */
 JNIEXPORT jstring JNICALL
 Java_java_net_Inet6AddressImpl_getLocalHostName(JNIEnv *env, jobject this) {
+    int ret;
     char hostname[NI_MAXHOST + 1];
 
     hostname[0] = '\0';
-    if (JVM_GetHostName(hostname, sizeof(hostname))) {
+    ret = gethostname(hostname, NI_MAXHOST);
+    if (ret == -1) {
         strcpy(hostname, "localhost");
 #if defined(__solaris__) && defined(AF_INET6)
     } else {
@@ -122,7 +116,7 @@ lookupIfLocalhost(JNIEnv *env, const char *hostname, jboolean includeV6)
      * the name (if the name actually matches something in DNS etc.
      */
     myhostname[0] = '\0';
-    if (JVM_GetHostName(myhostname, NI_MAXHOST)) {
+    if (gethostname(myhostname, NI_MAXHOST) == -1) {
         /* Something went wrong, maybe networking is not setup? */
         return NULL;
     }
@@ -294,7 +288,7 @@ Java_java_net_Inet6AddressImpl_lookupAllHostAddr(JNIEnv *env, jobject this,
 
     if (getaddrinfo_error) {
         /* report error */
-        ThrowUnknownHostExceptionWithGaiError(
+        NET_ThrowUnknownHostExceptionWithGaiError(
             env, hostname, getaddrinfo_error);
         JNU_ReleaseStringPlatformChars(env, host, hostname);
         return NULL;
@@ -392,7 +386,7 @@ Java_java_net_Inet6AddressImpl_lookupAllHostAddr(JNIEnv *env, jobject this,
         }
 
         while (iterator != NULL) {
-            int ret1;
+            jboolean ret1;
             if (iterator->ai_family == AF_INET) {
                 jobject iaObj = (*env)->NewObject(env, ia4_class, ia4_ctrID);
                 if (IS_NULL(iaObj)) {
@@ -416,7 +410,7 @@ Java_java_net_Inet6AddressImpl_lookupAllHostAddr(JNIEnv *env, jobject this,
                     goto cleanupAndReturn;
                 }
                 ret1 = setInet6Address_ipaddress(env, iaObj, (char *)&(((struct sockaddr_in6*)iterator->ai_addr)->sin6_addr));
-                if (!ret1) {
+                if (ret1 == JNI_FALSE) {
                     ret = NULL;
                     goto cleanupAndReturn;
                 }
@@ -485,24 +479,23 @@ Java_java_net_Inet6AddressImpl_getHostByAddr(JNIEnv *env, jobject this,
         addr |= ((caddr[2] <<8) & 0xff00);
         addr |= (caddr[3] & 0xff);
         memset((void *) &him4, 0, sizeof(him4));
-        him4.sin_addr.s_addr = (uint32_t) htonl(addr);
+        him4.sin_addr.s_addr = htonl(addr);
         him4.sin_family = AF_INET;
-        sa = (struct sockaddr *) &him4;
+        sa = (struct sockaddr *)&him4;
         len = sizeof(him4);
     } else {
         /*
          * For IPv6 address construct a sockaddr_in6 structure.
          */
         (*env)->GetByteArrayRegion(env, addrArray, 0, 16, caddr);
-        memset((void *) &him6, 0, sizeof(him6));
-        memcpy((void *)&(him6.sin6_addr), caddr, sizeof(struct in6_addr) );
+        memset((void *)&him6, 0, sizeof(him6));
+        memcpy((void *)&(him6.sin6_addr), caddr, sizeof(struct in6_addr));
         him6.sin6_family = AF_INET6;
-        sa = (struct sockaddr *) &him6 ;
-        len = sizeof(him6) ;
+        sa = (struct sockaddr *)&him6;
+        len = sizeof(him6);
     }
 
-    error = getnameinfo(sa, len, host, NI_MAXHOST, NULL, 0,
-                        NI_NAMEREQD);
+    error = getnameinfo(sa, len, host, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 
     if (!error) {
         ret = (*env)->NewStringUTF(env, host);
@@ -707,15 +700,15 @@ Java_java_net_Inet6AddressImpl_isReachable0(JNIEnv *env, jobject this,
      * or the echo service has been disabled.
      */
 
-    fd = JVM_Socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+    fd = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
 
     if (fd != -1) { /* Good to go, let's do a ping */
         return ping6(env, fd, &him6, timeout, netif, ttl);
     }
 
     /* No good, let's fall back on TCP */
-    fd = JVM_Socket(AF_INET6, SOCK_STREAM, 0);
-    if (fd == JVM_IO_ERR) {
+    fd = socket(AF_INET6, SOCK_STREAM, 0);
+    if (fd == -1) {
         /* note: if you run out of fds, you may not be able to load
          * the exception class, and get a NoClassDefFoundError
          * instead.
@@ -739,9 +732,8 @@ Java_java_net_Inet6AddressImpl_isReachable0(JNIEnv *env, jobject this,
     }
     SET_NONBLOCKING(fd);
 
-    /* no need to use NET_Connect as non-blocking */
     him6.sin6_port = htons((short) 7); /* Echo port */
-    connect_rv = JVM_Connect(fd, (struct sockaddr *)&him6, len);
+    connect_rv = NET_Connect(fd, (struct sockaddr *)&him6, len);
 
     /**
      * connection established or refused immediately, either way it means
@@ -751,7 +743,7 @@ Java_java_net_Inet6AddressImpl_isReachable0(JNIEnv *env, jobject this,
         close(fd);
         return JNI_TRUE;
     } else {
-        int optlen;
+        socklen_t optlen = (socklen_t)sizeof(connect_rv);
 
         switch (errno) {
         case ENETUNREACH: /* Network Unreachable */
@@ -782,9 +774,8 @@ Java_java_net_Inet6AddressImpl_isReachable0(JNIEnv *env, jobject this,
 
         if (timeout >= 0) {
           /* has connection been established */
-          optlen = sizeof(connect_rv);
-          if (JVM_GetSockOpt(fd, SOL_SOCKET, SO_ERROR, (void*)&connect_rv,
-                             &optlen) <0) {
+          if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void*)&connect_rv,
+                         &optlen) <0) {
             connect_rv = errno;
           }
           if (connect_rv == 0 || ECONNREFUSED) {

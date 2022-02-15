@@ -817,7 +817,7 @@ void Arguments::add_string(char*** bldarray, int* count, const char* arg) {
   } else {
     *bldarray = REALLOC_C_HEAP_ARRAY(char*, *bldarray, new_count, mtInternal);
   }
-  (*bldarray)[*count] = strdup(arg);
+  (*bldarray)[*count] = os::strdup_check_oom(arg);
   *count = new_count;
 }
 
@@ -1292,7 +1292,7 @@ void Arguments::set_cms_and_parnew_gc_flags() {
     (ParallelGCThreads == 0 ? 1 : ParallelGCThreads);
   const size_t preferred_max_new_size_unaligned =
     MIN2(max_heap/(NewRatio+1), ScaleForWordSize(young_gen_per_worker * parallel_gc_threads));
-  size_t preferred_max_new_size =
+  uintx preferred_max_new_size = (uintx)
     align_size_up(preferred_max_new_size_unaligned, os::vm_page_size());
 
   // Unless explicitly requested otherwise, size young gen
@@ -1312,18 +1312,18 @@ void Arguments::set_cms_and_parnew_gc_flags() {
     }
     if (PrintGCDetails && Verbose) {
       // Too early to use gclog_or_tty
-      tty->print_cr("CMS ergo set MaxNewSize: " SIZE_FORMAT, MaxNewSize);
+      tty->print_cr("CMS ergo set MaxNewSize: " UINTX_FORMAT, MaxNewSize);
     }
 
     // Code along this path potentially sets NewSize and OldSize
     if (PrintGCDetails && Verbose) {
       // Too early to use gclog_or_tty
-      tty->print_cr("CMS set min_heap_size: " SIZE_FORMAT
-           " initial_heap_size:  " SIZE_FORMAT
+      tty->print_cr("CMS set min_heap_size: " UINTX_FORMAT
+           " initial_heap_size:  " UINTX_FORMAT
            " max_heap: " SIZE_FORMAT,
            min_heap_size(), InitialHeapSize, max_heap);
     }
-    size_t min_new = preferred_max_new_size;
+    uintx min_new = preferred_max_new_size;
     if (FLAG_IS_CMDLINE(NewSize)) {
       min_new = NewSize;
     }
@@ -1335,17 +1335,17 @@ void Arguments::set_cms_and_parnew_gc_flags() {
         FLAG_SET_ERGO(uintx, NewSize, MIN2(preferred_max_new_size, NewSize));
         if (PrintGCDetails && Verbose) {
           // Too early to use gclog_or_tty
-          tty->print_cr("CMS ergo set NewSize: " SIZE_FORMAT, NewSize);
+          tty->print_cr("CMS ergo set NewSize: " UINTX_FORMAT, NewSize);
         }
       }
       // Unless explicitly requested otherwise, size old gen
       // so it's NewRatio x of NewSize.
       if (FLAG_IS_DEFAULT(OldSize)) {
         if (max_heap > NewSize) {
-          FLAG_SET_ERGO(uintx, OldSize, MIN2(NewRatio*NewSize, max_heap - NewSize));
+          FLAG_SET_ERGO(uintx, OldSize, MIN2(NewRatio*NewSize, (uintx) (max_heap - NewSize)));
           if (PrintGCDetails && Verbose) {
             // Too early to use gclog_or_tty
-            tty->print_cr("CMS ergo set OldSize: " SIZE_FORMAT, OldSize);
+            tty->print_cr("CMS ergo set OldSize: " UINTX_FORMAT, OldSize);
           }
         }
       }
@@ -1541,7 +1541,6 @@ void Arguments::set_use_compressed_oops() {
 #endif // _LP64
 #endif // ZERO
 }
-
 
 // NOTE: set_use_compressed_klass_ptrs() must be called after calling
 // set_use_compressed_oops().
@@ -1906,7 +1905,7 @@ void Arguments::set_heap_size() {
 
       if (PrintGCDetails && Verbose) {
         // Cannot use gclog_or_tty yet.
-        tty->print_cr("  Initial heap size " SIZE_FORMAT, (uintx)reasonable_initial);
+        tty->print_cr("  Initial heap size " SIZE_FORMAT, (size_t)reasonable_initial);
       }
       FLAG_SET_ERGO(uintx, InitialHeapSize, (uintx)reasonable_initial);
     }
@@ -1916,7 +1915,7 @@ void Arguments::set_heap_size() {
       set_min_heap_size(MIN2((uintx)reasonable_minimum, InitialHeapSize));
       if (PrintGCDetails && Verbose) {
         // Cannot use gclog_or_tty yet.
-        tty->print_cr("  Minimum heap size " SIZE_FORMAT, min_heap_size());
+        tty->print_cr("  Minimum heap size " UINTX_FORMAT, min_heap_size());
       }
     }
   }
@@ -2080,7 +2079,7 @@ void Arguments::process_java_compiler_argument(char* arg) {
 }
 
 void Arguments::process_java_launcher_argument(const char* launcher, void* extra_info) {
-  _sun_java_launcher = strdup(launcher);
+  _sun_java_launcher = os::strdup_check_oom(launcher);
   if (strcmp("gamma", _sun_java_launcher) == 0) {
     _created_by_gamma_launcher = true;
   }
@@ -2636,11 +2635,11 @@ bool Arguments::check_vm_args_consistency() {
                 "Invalid ReservedCodeCacheSize=%dK. Must be at least %uK.\n", ReservedCodeCacheSize/K,
                 min_code_cache_size/K);
     status = false;
-  } else if (ReservedCodeCacheSize > 2*G) {
-    // Code cache size larger than MAXINT is not supported.
+  } else if (ReservedCodeCacheSize > CODE_CACHE_SIZE_LIMIT) {
+    // Code cache size larger than CODE_CACHE_SIZE_LIMIT is not supported.
     jio_fprintf(defaultStream::error_stream(),
                 "Invalid ReservedCodeCacheSize=%dM. Must be at most %uM.\n", ReservedCodeCacheSize/M,
-                (2*G)/M);
+                CODE_CACHE_SIZE_LIMIT/M);
     status = false;
   }
 
@@ -3225,7 +3224,7 @@ jint Arguments::parse_each_vm_init_arg(const JavaVMInitArgs* args,
       // Redirect GC output to the file. -Xloggc:<filename>
       // ostream_init_log(), when called will use this filename
       // to initialize a fileStream.
-      _gc_log_filename = strdup(tail);
+      _gc_log_filename = os::strdup_check_oom(tail);
      if (!is_filename_valid(_gc_log_filename)) {
        jio_fprintf(defaultStream::output_stream(),
                   "Invalid file name for use with -Xloggc: Filename can only contain the "
@@ -3487,7 +3486,7 @@ void Arguments::fix_appclasspath() {
       src ++;
     }
 
-    char* copy = os::strdup(src, mtInternal);
+    char* copy = os::strdup_check_oom(src, mtInternal);
 
     // trim all trailing empty paths
     for (char* tail = copy + strlen(copy) - 1; tail >= copy && *tail == separator; tail--) {
@@ -3873,7 +3872,7 @@ static char* get_shared_archive_path() {
         jvm_path, os::file_separator());
     }
   } else {
-    shared_archive_path = os::strdup(SharedArchiveFile, mtInternal);
+    shared_archive_path = os::strdup_check_oom(SharedArchiveFile, mtInternal);
   }
   return shared_archive_path;
 }

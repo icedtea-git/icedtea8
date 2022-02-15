@@ -34,10 +34,6 @@ import sun.awt.X11GraphicsConfig;
 
 class XRobotPeer implements RobotPeer {
 
-    static {
-        loadNativeLibraries();
-    }
-
     private X11GraphicsConfig   xgc = null;
     /*
      * native implementation uses some static shared data (pipes, processes)
@@ -56,7 +52,7 @@ class XRobotPeer implements RobotPeer {
     }
 
     public void mouseMove(int x, int y) {
-        mouseMoveImpl(xgc, x, y);
+        mouseMoveImpl(xgc, xgc.scaleUp(x), xgc.scaleUp(y));
     }
 
     public void mousePress(int buttons) {
@@ -81,13 +77,14 @@ class XRobotPeer implements RobotPeer {
 
     public int getRGBPixel(int x, int y) {
         int pixelArray[] = new int[1];
-        getRGBPixelsImpl(xgc, x, y, 1, 1, pixelArray);
+        getRGBPixelsImpl(xgc, x, y, 1, 1, xgc.getScale(), pixelArray);
         return pixelArray[0];
     }
 
     public int [] getRGBPixels(Rectangle bounds) {
         int pixelArray[] = new int[bounds.width*bounds.height];
-        getRGBPixelsImpl(xgc, bounds.x, bounds.y, bounds.width, bounds.height, pixelArray);
+        getRGBPixelsImpl(xgc, bounds.x, bounds.y, bounds.width, bounds.height,
+                         xgc.getScale(), pixelArray);
         return pixelArray;
     }
 
@@ -101,6 +98,7 @@ class XRobotPeer implements RobotPeer {
     private static native synchronized void keyPressImpl(int keycode);
     private static native synchronized void keyReleaseImpl(int keycode);
 
-    private static native synchronized void getRGBPixelsImpl(X11GraphicsConfig xgc, int x, int y, int width, int height, int pixelArray[]);
-    private static native void loadNativeLibraries();
+    private static native synchronized void getRGBPixelsImpl(X11GraphicsConfig xgc,
+            int x, int y, int width, int height, int scale,
+            int pixelArray[]);
 }

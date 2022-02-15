@@ -237,6 +237,8 @@ flags.make: $(BUILDTREE_MAKE) ../shared_dirs.lst
 	echo "VENDOR_URL = $(VENDOR_URL)"; \
 	echo "VENDOR_URL_BUG = $(VENDOR_URL_BUG)"; \
 	echo "VENDOR_URL_VM_BUG = $(VENDOR_URL_VM_BUG)"; \
+	echo "DERIVATIVE_ID = $(DERIVATIVE_ID)"; \
+	echo "DISTRIBUTION_ID = $(DISTRIBUTION_ID)"; \
 	echo "OPENJDK = $(OPENJDK)"; \
 	echo "$(LP64_SETTING/$(DATA_MODE))"; \
 	echo; \

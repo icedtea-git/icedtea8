@@ -2732,6 +2732,8 @@ static jobject gtk3_get_setting(JNIEnv *env, Setting property)
             return get_boolean_property(env, settings, "gtk-cursor-blink");
         case GTK_CURSOR_BLINK_TIME:
             return get_integer_property(env, settings, "gtk-cursor-blink-time");
+        case GTK_BUTTON_ORDER:
+	    return get_boolean_property(env, settings, "gtk-alternative-button-order");
     }
 
     return NULL;

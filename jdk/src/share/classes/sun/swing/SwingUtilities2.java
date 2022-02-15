@@ -31,7 +31,6 @@ import java.awt.*;
 import static java.awt.RenderingHints.*;
 import java.awt.event.*;
 import java.awt.font.*;
-import java.awt.geom.*;
 import java.awt.print.PrinterGraphics;
 import java.text.BreakIterator;
 import java.text.CharacterIterator;
@@ -53,7 +52,6 @@ import sun.swing.PrintColorUIResource;
 import sun.swing.ImageIconUIResource;
 import sun.print.ProxyPrintGraphics;
 import sun.awt.*;
-import sun.security.action.GetPropertyAction;
 import sun.security.util.SecurityConstants;
 import java.io.*;
 import java.util.*;
@@ -79,8 +77,7 @@ public class SwingUtilities2 {
      * The <code>AppContext</code> key for our one <code>LAFState</code>
      * instance.
      */
-    public static final Object LAF_STATE_KEY =
-            new StringBuffer("LookAndFeel State");
+    public static final Object LAF_STATE_KEY = new Object(); // LookAndFeel State
 
     public static final Object MENU_SELECTION_MANAGER_LISTENER_KEY =
             new StringBuffer("MenuSelectionManager listener key");
@@ -111,8 +108,7 @@ public class SwingUtilities2 {
      * To avoid having this property persist between look and feels changes
      * the value of the property is set to null in JComponent.setUI
      */
-    public static final Object AA_TEXT_PROPERTY_KEY =
-                          new StringBuffer("AATextInfoPropertyKey");
+    public static final Object AA_TEXT_PROPERTY_KEY = new Object(); // AATextInfoPropertyKey
 
     /**
      * Attribute key for the content elements.  If it is set on an element, the
@@ -124,8 +120,7 @@ public class SwingUtilities2 {
      * Used to tell a text component, being used as an editor for table
      * or tree, how many clicks it took to start editing.
      */
-    private static final StringBuilder SKIP_CLICK_COUNT =
-        new StringBuilder("skipClickCount");
+    private static final Object SKIP_CLICK_COUNT = new Object(); // skipClickCount
 
     /* Presently this class assumes default fractional metrics.
      * This may need to change to emulate future platform L&Fs.
@@ -185,8 +180,7 @@ public class SwingUtilities2 {
      * Key used in client properties used to indicate that the
      * <code>ComponentUI</code> of the JComponent instance should be returned.
      */
-    public static final Object COMPONENT_UI_PROPERTY_KEY =
-                            new StringBuffer("ComponentUIPropertyKey");
+    public static final Object COMPONENT_UI_PROPERTY_KEY = new Object(); // ComponentUIPropertyKey
 
     /** Client Property key for the text maximal offsets for BasicMenuItemUI */
     public static final StringUIClientPropertyKey BASICMENUITEMUI_MAX_TEXT_OFFSET =

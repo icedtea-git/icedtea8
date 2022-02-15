@@ -102,6 +102,19 @@ public abstract class PKCS11Test {
     static double softoken3_version = -1;
     static double nss3_version = -1;
 
+    /*
+     * Use Solaris SPARC 11.2 or later to avoid an intermittent failure
+     * when running SunPKCS11-Solaris (8044554)
+     */
+    static boolean isBadSolarisSparc(Provider p) {
+        if ("SunPKCS11-Solaris".equals(p.getName()) && badSolarisSparc) {
+            System.out.println("SunPKCS11-Solaris provider requires " +
+                "Solaris SPARC 11.2 or later, skipping");
+            return true;
+        }
+        return false;
+    }
+
     static Provider getSunPKCS11(String config) throws Exception {
         Class clazz = Class.forName("sun.security.pkcs11.SunPKCS11");
         Constructor cons = clazz.getConstructor(new Class[] {String.class});
@@ -602,6 +615,14 @@ public abstract class PKCS11Test {
     static final boolean badNSSVersion =
             getNSSVersion() >= 3.11 && getNSSVersion() < 3.12;
 
+    private static final String distro = distro();
+
+    static final boolean badSolarisSparc =
+            System.getProperty("os.name").equals("SunOS") &&
+            System.getProperty("os.arch").equals("sparcv9") &&
+            System.getProperty("os.version").compareTo("5.11") <= 0 &&
+            getDistro().compareTo("11.2") < 0;
+
     public static String toString(byte[] b) {
         if (b == null) {
             return "(null)";
@@ -694,4 +715,26 @@ public abstract class PKCS11Test {
         return algorithms;
     }
 
+    /**
+     * Get the identifier for the operating system distribution
+     */
+    static String getDistro() {
+        return distro;
+    }
+
+    private static String distro() {
+        if (props.getProperty("os.name").equals("SunOS")) {
+            try (BufferedReader in =
+                         new BufferedReader(new InputStreamReader(
+                                 Runtime.getRuntime().exec("uname -v").getInputStream()))) {
+
+                return in.readLine();
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to determine distro.", e);
+            }
+        } else {
+            // Not used outside Solaris
+            return null;
+        }
+    }
 }

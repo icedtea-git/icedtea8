@@ -377,6 +377,14 @@ public class GTKLookAndFeel extends SynthLookAndFeel {
                 caretBlinkRate = Integer.valueOf(500);
             }
         }
+
+        /* If gtk-alternative-button-order is set to true, isYesLast needs to be false */
+        Boolean buttonOrder = Boolean.TRUE;
+        if (Boolean.TRUE.equals(GTKEngine.INSTANCE.getSetting(
+                GTKEngine.Settings.GTK_BUTTON_ORDER))) {
+            buttonOrder = Boolean.FALSE;
+        }
+
         Insets zeroInsets = new InsetsUIResource(0, 0, 0, 0);
 
         Double defaultCaretAspectRatio = new Double(0.025);
@@ -823,7 +831,7 @@ public class GTKLookAndFeel extends SynthLookAndFeel {
             "OptionPane.windowBindings", new Object[] {
                 "ESCAPE", "close" },
             "OptionPane.buttonClickThreshhold", new Integer(500),
-            "OptionPane.isYesLast", Boolean.TRUE,
+            "OptionPane.isYesLast", buttonOrder,
             "OptionPane.font", new FontLazyValue(Region.OPTION_PANE),
 
             "Panel.font", new FontLazyValue(Region.PANEL),

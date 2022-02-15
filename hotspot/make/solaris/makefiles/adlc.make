@@ -73,8 +73,10 @@ endif
 
 # CFLAGS_WARN holds compiler options to suppress/enable warnings.
 # Compiler warnings are treated as errors
-ifeq ($(shell expr $(COMPILER_REV_NUMERIC) \>= 509), 1)
-  CFLAGS_WARN = +w -errwarn
+ifneq ($(COMPILER_WARNINGS_FATAL),false)
+  ifeq ($(shell expr $(COMPILER_REV_NUMERIC) \>= 509), 1)
+    CFLAGS_WARN = +w -errwarn
+  endif
 endif
 # When using compiler version 5.13 (Solaris Studio 12.4), calls to explicitly 
 # instantiated template functions trigger this warning when +w is active.
@@ -82,6 +84,10 @@ ifeq ($(shell expr $(COMPILER_REV_NUMERIC) \>= 513), 1)
   CFLAGS_WARN += -erroff=notemsource
 endif
 CFLAGS += $(CFLAGS_WARN)
+
+# Extra flags from gnumake's invocation or environment
+CFLAGS += $(EXTRA_CFLAGS)
+ASFLAGS += $(EXTRA_ASFLAGS)
 
 ifeq ("${Platform_compiler}", "sparcWorks")
 # Enable the following CFLAGS addition if you need to compare the

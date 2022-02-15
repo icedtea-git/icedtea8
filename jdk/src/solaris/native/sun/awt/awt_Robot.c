@@ -27,9 +27,6 @@
     #error This file should not be included in headless library
 #endif
 
-#include "jvm_md.h"
-#include <dlfcn.h>
-
 #include "awt_p.h"
 #include "awt_GraphicsEnv.h"
 #define XK_MISCELLANY
@@ -41,6 +38,7 @@
 #include <X11/extensions/XTest.h>
 #include <X11/extensions/XInput.h>
 #include <X11/extensions/XI.h>
+#include <X11/extensions/Xcomposite.h>
 #include <jni.h>
 #include <sizecalc.h>
 #include "canvas.h"
@@ -54,45 +52,10 @@
 #include <sys/socket.h>
 #endif
 
-static Bool   (*compositeQueryExtension)   (Display*, int*, int*);
-static Status (*compositeQueryVersion)     (Display*, int*, int*);
-static Window (*compositeGetOverlayWindow) (Display *, Window);
-
 extern struct X11GraphicsConfigIDs x11GraphicsConfigIDs;
 
 static jint * masks;
 static jint num_buttons;
-
-static void *xCompositeHandle;
-
-static const char* XCOMPOSITE = JNI_LIB_NAME("Xcomposite");
-static const char* XCOMPOSITE_VERSIONED = VERSIONED_JNI_LIB_NAME("Xcomposite", "1");
-
-static Bool checkXCompositeFunctions(void) {
-    return (compositeQueryExtension   != NULL   &&
-            compositeQueryVersion     != NULL   &&
-            compositeGetOverlayWindow != NULL);
-}
-
-static void initXCompositeFunctions(void) {
-
-    if (xCompositeHandle == NULL) {
-        xCompositeHandle = dlopen(XCOMPOSITE, RTLD_LAZY | RTLD_GLOBAL);
-        if (xCompositeHandle == NULL) {
-            xCompositeHandle = dlopen(XCOMPOSITE_VERSIONED, RTLD_LAZY | RTLD_GLOBAL);
-        }
-    }
-    //*(void **)(&asyncGetCallTraceFunction)
-    if (xCompositeHandle != NULL) {
-        *(void **)(&compositeQueryExtension) = dlsym(xCompositeHandle, "XCompositeQueryExtension");
-        *(void **)(&compositeQueryVersion) = dlsym(xCompositeHandle, "XCompositeQueryVersion");
-        *(void **)(&compositeGetOverlayWindow) = dlsym(xCompositeHandle, "XCompositeGetOverlayWindow");
-    }
-
-    if (xCompositeHandle && !checkXCompositeFunctions()) {
-        dlclose(xCompositeHandle);
-    }
-}
 
 static int32_t isXTestAvailable() {
     int32_t major_opcode, first_event, first_error;
@@ -132,16 +95,13 @@ static Bool hasXCompositeOverlayExtension(Display *display) {
 
     int xoverlay = False;
     int eventBase, errorBase;
-    if (checkXCompositeFunctions() &&
-        compositeQueryExtension(display, &eventBase, &errorBase))
-    {
+    if (XCompositeQueryExtension(display, &eventBase, &errorBase)) {
         int major = 0;
         int minor = 0;
 
-        compositeQueryVersion(display, &major, &minor);
-        if (major > 0 || minor >= 3) {
+        XCompositeQueryVersion(display, &major, &minor);
+        if (major > 0 || minor >= 3)
             xoverlay = True;
-        }
     }
 
     return xoverlay;
@@ -273,69 +233,97 @@ JNIEXPORT void JNICALL
 Java_sun_awt_X11_XRobotPeer_getRGBPixelsImpl( JNIEnv *env,
                              jclass cls,
                              jobject xgc,
-                             jint x,
-                             jint y,
-                             jint width,
-                             jint height,
+                             jint jx,
+                             jint jy,
+                             jint jwidth,
+                             jint jheight,
+                             jint scale,
                              jintArray pixelArray) {
-
     XImage *image;
     jint *ary;               /* Array of jints for sending pixel values back
                               * to parent process.
                               */
     Window rootWindow;
+    XWindowAttributes attr;
     AwtGraphicsConfigDataPtr adata;
 
-    DTRACE_PRINTLN6("RobotPeer: getRGBPixelsImpl(%lx, %d, %d, %d, %d, %x)", xgc, x, y, width, height, pixelArray);
+    DTRACE_PRINTLN6("RobotPeer: getRGBPixelsImpl(%lx, %d, %d, %d, %d, %x)", xgc, jx, jy, jwidth, jheight, pixelArray);
 
-    AWT_LOCK();
-
-    /* avoid a lot of work for empty rectangles */
-    if ((width * height) == 0) {
-        AWT_UNLOCK();
+    if (jwidth <= 0 || jheight <= 0) {
         return;
     }
-    DASSERT(width * height > 0); /* only allow positive size */
 
     adata = (AwtGraphicsConfigDataPtr) JNU_GetLongFieldAsPtr(env, xgc, x11GraphicsConfigIDs.aData);
     DASSERT(adata != NULL);
+
+    AWT_LOCK();
+
+    jint sx = jx * scale;
+    jint sy = jy * scale;
+    jint swidth = jwidth * scale;
+    jint sheight = jheight * scale;
 
     rootWindow = XRootWindow(awt_display, adata->awt_visInfo.screen);
     if (hasXCompositeOverlayExtension(awt_display) &&
         isXCompositeDisplay(awt_display, adata->awt_visInfo.screen))
     {
-        rootWindow = compositeGetOverlayWindow(awt_display, rootWindow);
+        rootWindow = XCompositeGetOverlayWindow(awt_display, rootWindow);
     }
 
-    image = getWindowImage(awt_display, rootWindow, x, y, width, height);
+    if (!XGetWindowAttributes(awt_display, rootWindow, &attr)
+            || sx + swidth <= attr.x
+            || attr.x + attr.width <= sx
+            || sy + sheight <= attr.y
+            || attr.y + attr.height <= sy) {
 
-    /* Array to use to crunch around the pixel values */
-    if (!IS_SAFE_SIZE_MUL(width, height) ||
-        !(ary = (jint *) SAFE_SIZE_ARRAY_ALLOC(malloc, width * height, sizeof (jint))))
-    {
-        JNU_ThrowOutOfMemoryError(env, "OutOfMemoryError");
-        XDestroyImage(image);
         AWT_UNLOCK();
-        return;
+        return; // Does not intersect with root window
     }
+
+    jint _x, _y;
+    jint x = MAX(sx, attr.x);
+    jint y = MAX(sy, attr.y);
+    jint width = MIN(sx + swidth, attr.x + attr.width) - x;
+    jint height = MIN(sy + sheight, attr.y + attr.height) - y;
+
+
+    int dx = attr.x > sx ? attr.x - sx : 0;
+    int dy = attr.y > sy ? attr.y - sy : 0;
+
+    int index;
+
+    image = getWindowImage(awt_display, rootWindow, sx, sy, swidth, sheight);
+
+    ary = (*env)->GetPrimitiveArrayCritical(env, pixelArray, NULL);
+
+    if (!ary) {
+	XDestroyImage(image);
+	AWT_UNLOCK();
+	return;
+    }
+
+    dx /= scale;
+    dy /= scale;
+    width /= scale;
+    height /= scale;
+
     /* convert to Java ARGB pixels */
-    for (y = 0; y < height; y++) {
-        for (x = 0; x < width; x++) {
-            jint pixel = (jint) XGetPixel(image, x, y); /* Note ignore upper
-                                                         * 32-bits on 64-bit
-                                                         * OSes.
-                                                         */
+    for (_y = 0; _y < height; _y++) {
+	for (_x = 0; _x < width; _x++) {
+                jint pixel = (jint) XGetPixel(image, _x * scale, _y * scale);
+                                                              /* Note ignore upper
+							   * 32-bits on 64-bit
+							   * OSes.
+							   */
+	    pixel |= 0xff000000; /* alpha - full opacity */
 
-            pixel |= 0xff000000; /* alpha - full opacity */
-
-            ary[(y * width) + x] = pixel;
-        }
+	    index = (_y + dy) * jwidth + (_x + dx);
+	    ary[index] = pixel;
+	}
     }
-    (*env)->SetIntArrayRegion(env, pixelArray, 0, height * width, ary);
-    free(ary);
-
+    
     XDestroyImage(image);
-
+    (*env)->ReleasePrimitiveArrayCritical(env, pixelArray, ary, 0);
     AWT_UNLOCK();
 }
 
@@ -486,9 +474,4 @@ Java_sun_awt_X11_XRobotPeer_mouseWheelImpl (JNIEnv *env,
     XSync(awt_display, False);
 
     AWT_UNLOCK();
-}
-
-JNIEXPORT void JNICALL
-Java_sun_awt_X11_XRobotPeer_loadNativeLibraries (JNIEnv *env, jclass cls) {
-    initXCompositeFunctions();
 }

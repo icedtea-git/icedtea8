@@ -61,6 +61,10 @@ public class TestCurves extends PKCS11Test {
             return;
         }
 
+        if (isBadSolarisSparc(p)) {
+            return;
+        }
+
         // Check if this is sparc for later failure avoidance.
         boolean sparc = false;
         if (props.getProperty("os.arch").equals("sparcv9")) {

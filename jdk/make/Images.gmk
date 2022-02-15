@@ -646,7 +646,7 @@ $(JDK_IMAGE_DIR)/src.zip: $(IMAGES_OUTPUTDIR)/src.zip
 ################################################################################
 # Post processing (strip etc)
 
-ifneq ($(POST_STRIP_CMD), )
+ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(OPENJDK_TARGET_OS), windows)
     EXEC_LIST_BIN := $(filter-out %$(notdir $(MSVCR_DLL)), $(filter %.exe %.dll, $(ALL_BIN_LIST)))
   else

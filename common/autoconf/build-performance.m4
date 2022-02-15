@@ -212,7 +212,7 @@ AC_DEFUN([BPERF_SETUP_CCACHE_USAGE],
     # Only use ccache if it is 3.1.4 or later, which supports
     # precompiled headers.
     AC_MSG_CHECKING([if ccache supports precompiled headers])
-    HAS_GOOD_CCACHE=`($CCACHE --version | head -n 1 | grep -E 3.1.@<:@456789@:>@) 2> /dev/null`
+    HAS_GOOD_CCACHE=`($CCACHE --version | head -n 1 | grep -E "3\.(1\.@<:@456789@:>@|@<:@2-9@:>@)") 2>&AS_MESSAGE_LOG_FD`
     if test "x$HAS_GOOD_CCACHE" = x; then
       AC_MSG_RESULT([no, disabling ccache])
       CCACHE=

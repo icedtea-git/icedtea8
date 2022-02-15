@@ -74,6 +74,7 @@ $(LIBJSIG): $(JSIGSRCDIR)/jsig.c $(LIBJSIG_MAPFILE)
 	$(QUIETLY) $(CC) $(SYMFLAG) $(ARCHFLAG) $(SHARED_FLAG) $(PICFLAG) \
                          $(LFLAGS_JSIG) $(JSIG_DEBUG_CFLAGS) $(JSIG_OPT_FLAGS) $(EXTRA_CFLAGS) -o $@ $<
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(OS_VENDOR), Darwin)
 	$(DSYMUTIL) $@
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
@@ -96,6 +97,7 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
 	$(RM) $(LIBJSIG_DEBUGINFO)
     endif
   endif
+endif
 endif
 
 install_jsig: $(LIBJSIG)

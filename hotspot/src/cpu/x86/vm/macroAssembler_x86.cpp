@@ -1078,7 +1078,7 @@ int MacroAssembler::biased_locking_enter(Register lock_reg,
   }
   assert(markOopDesc::age_shift == markOopDesc::lock_bits + markOopDesc::biased_lock_bits, "biased locking makes assumptions about bit layout");
   Address mark_addr      (obj_reg, oopDesc::mark_offset_in_bytes());
-  Address saved_mark_addr(lock_reg, 0);
+  NOT_LP64( Address saved_mark_addr(lock_reg, 0); )
 
   if (PrintBiasedLockingStatistics && counters == NULL) {
     counters = BiasedLocking::counters();
@@ -1699,7 +1699,7 @@ void MacroAssembler::fast_lock(Register objReg, Register boxReg, Register tmpReg
                                RTMLockingCounters* stack_rtm_counters,
                                Metadata* method_data,
                                bool use_rtm, bool profile_rtm) {
-  // Ensure the register assignents are disjoint
+  // Ensure the register assignments are disjoint
   assert(tmpReg == rax, "");
 
   if (use_rtm) {

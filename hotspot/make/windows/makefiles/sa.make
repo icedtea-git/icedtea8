@@ -165,9 +165,11 @@ $(SAWINDBG): $(SASRCFILES)
 	$(MT) -manifest $(@F).manifest -outputresource:$(@F);#2
 !endif
 !if "$(ENABLE_FULL_DEBUG_SYMBOLS)" == "1"
+!if "$(STRIP_POLICY)" != "no_strip"
 !if "$(ZIP_DEBUGINFO_FILES)" == "1"
 	$(ZIPEXE) -q $*.diz $*.map $*.pdb
 	$(RM) $*.map $*.pdb
+!endif
 !endif
 !endif
 	-@rm -f $*.obj

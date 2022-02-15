@@ -95,10 +95,14 @@ AC_DEFUN_ONCE([JDKOPT_SETUP_JVM_VARIANTS],
 #    core: interpreter only, no compiler (only works on some platforms)
   AC_MSG_CHECKING([which variants of the JVM to build])
   AC_ARG_WITH([jvm-variants], [AS_HELP_STRING([--with-jvm-variants],
-	[JVM variants (separated by commas) to build (server, client, minimal1, kernel, zero, zeroshark, core) @<:@server@:>@])])
+        [JVM variants (separated by commas) to build (server, client, minimal1, kernel, zero, zeroshark, core) @<:@server@:>@])])
 
   if test "x$with_jvm_variants" = x; then
-    with_jvm_variants="server"
+    if test "x$OPENJDK_TARGET_CPU" = xaarch32; then
+      with_jvm_variants="client";
+    else
+      with_jvm_variants="server";
+    fi
   fi
 
   JVM_VARIANTS=",$with_jvm_variants,"
@@ -161,6 +165,9 @@ AC_DEFUN_ONCE([JDKOPT_SETUP_JVM_VARIANTS],
   if test "x$VAR_CPU" = xppc64 -o "x$VAR_CPU" = xppc64le ; then
     INCLUDE_SA=false
   fi
+  if test "x$OPENJDK_TARGET_CPU" = xaarch32; then
+    INCLUDE_SA=false
+  fi
   AC_SUBST(INCLUDE_SA)
 
   if test "x$OPENJDK_TARGET_OS" = "xmacosx"; then
@@ -204,6 +211,17 @@ AC_DEFUN_ONCE([JDKOPT_SETUP_DEBUG_LEVEL],
     AC_MSG_ERROR([Allowed debug levels are: release, fastdebug and slowdebug])
   fi
 
+  AC_MSG_CHECKING([whether to enable Java debug symbols])
+  AC_ARG_WITH([java-debug-symbols], [AS_HELP_STRING([--with-java-debug-symbols],
+      [set the status of Java debug symbols (yes, no, default) @<:@default@:>@])],
+      [JAVA_DEBUG_SYMBOLS="${withval}"], [JAVA_DEBUG_SYMBOLS="default"])
+  AC_MSG_RESULT([$JAVA_DEBUG_SYMBOLS])
+
+  if test "x$JAVA_DEBUG_SYMBOLS" != xyes && \
+      test "x$JAVA_DEBUG_SYMBOLS" != xno && \
+      test "x$JAVA_DEBUG_SYMBOLS" != xdefault; then
+    AC_MSG_ERROR([Allowed Java debug symbol settings are: yes, no, default])
+  fi
 
   ###############################################################################
   #
@@ -234,6 +252,16 @@ AC_DEFUN_ONCE([JDKOPT_SETUP_DEBUG_LEVEL],
       BUILD_VARIANT_RELEASE="-debug"
       HOTSPOT_DEBUG_LEVEL="jvmg"
       HOTSPOT_EXPORT="debug"
+      ;;
+  esac
+
+  # Override DEBUG_CLASSFILES if JAVA_DEBUG_SYMBOLS is set to yes or no
+  case $JAVA_DEBUG_SYMBOLS in
+    yes )
+      DEBUG_CLASSFILES="true"
+      ;;
+    no )
+      DEBUG_CLASSFILES="false"
       ;;
   esac
 
@@ -357,7 +385,7 @@ AC_DEFUN_ONCE([JDKOPT_SETUP_JDK_OPTIONS],
 
   if test "x$SUPPORT_HEADFUL" = xno; then
     # Thus we are building headless only.
-    BUILD_HEADLESS="BUILD_HEADLESS:=true"
+    BUILD_HEADFUL="BUILD_HEADLESS_ONLY:=true"
     headful_msg="headless only"
   fi
 
@@ -366,6 +394,7 @@ AC_DEFUN_ONCE([JDKOPT_SETUP_JDK_OPTIONS],
   AC_SUBST(SUPPORT_HEADLESS)
   AC_SUBST(SUPPORT_HEADFUL)
   AC_SUBST(BUILD_HEADLESS)
+  AC_SUBST(BUILD_HEADFUL)
 
   # Control wether Hotspot runs Queens test after build.
   AC_ARG_ENABLE([hotspot-test-in-build], [AS_HELP_STRING([--enable-hotspot-test-in-build],
@@ -761,6 +790,9 @@ AC_DEFUN_ONCE([JDKOPT_SETUP_DEBUG_SYMBOLS],
   AC_SUBST(POST_STRIP_CMD)
   AC_SUBST(DEBUG_BINARIES)
   AC_SUBST(ZIP_DEBUGINFO_FILES)
+  AC_SUBST(CFLAGS_DEBUG_SYMBOLS)
+  AC_SUBST(CXXFLAGS_DEBUG_SYMBOLS)
+  AC_SUBST(ASFLAGS_DEBUG_SYMBOLS)
 ])
 
 # Support for customization of the build process. Some build files

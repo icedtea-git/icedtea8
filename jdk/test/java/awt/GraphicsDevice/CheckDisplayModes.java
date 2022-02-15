@@ -23,6 +23,7 @@
 
 /*
  * @test
+ * @key headful
  * @bug 8007146 8213119
  * @summary [macosx] Setting a display mode crashes JDK under VNC
  * @author Alexander Scherbatiy

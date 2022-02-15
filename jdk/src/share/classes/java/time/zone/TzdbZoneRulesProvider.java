@@ -78,6 +78,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
+import sun.util.calendar.ZoneInfoFile;
+
 /**
  * Loads time-zone rules for 'TZDB'.
  *
@@ -106,7 +108,16 @@ final class TzdbZoneRulesProvider extends ZoneRulesProvider {
      */
     public TzdbZoneRulesProvider() {
         try {
-            String libDir = System.getProperty("java.home") + File.separator + "lib";
+            final String homeDir = System.getProperty("java.home");
+            if (homeDir == null) {
+                throw new Error("java.home is not set");
+            }
+            String libDir = homeDir + File.separator + "lib";
+            String otherDir = ZoneInfoFile.getZoneInfoDir(libDir);
+            if (otherDir != null) {
+                libDir = otherDir;
+            }
+
             try (DataInputStream dis = new DataInputStream(
                      new BufferedInputStream(new FileInputStream(
                          new File(libDir, "tzdb.dat"))))) {

@@ -722,7 +722,7 @@ void InterpreterMacroAssembler::lock_object(Register lock_reg) {
     // Save (object->mark() | 1) into BasicLock's displaced header
     movptr(Address(lock_reg, mark_offset), swap_reg);
 
-    assert(lock_offset == 0, "displached header must be first word in BasicObjectLock");
+    assert(lock_offset == 0, "displaced header must be first word in BasicObjectLock");
     if (os::is_MP()) {
       lock();
     }
@@ -811,7 +811,7 @@ void InterpreterMacroAssembler::unlock_object(Register lock_reg) {
     if (os::is_MP()) lock();
     cmpxchgptr(header_reg, Address(obj_reg, 0));
 
-    // zero for recursive case
+    // zero for simple unlock of a stack-lock case
     jcc(Assembler::zero, done);
 
     // Call the runtime routine for slow case.

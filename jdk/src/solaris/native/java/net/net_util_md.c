@@ -22,52 +22,41 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-#include <errno.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/tcp.h>        /* Defines TCP_NODELAY, needed for 2.6 */
-#include <netinet/in.h>
-#include <net/if.h>
-#include <netdb.h>
-#include <stdlib.h>
 #include <dlfcn.h>
+#include <errno.h>
+#include <net/if.h>
+#include <netinet/tcp.h> // defines TCP_NODELAY
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
 #include <sys/time.h>
 
-#ifndef _ALLBSD_SOURCE
-#include <values.h>
-#else
-#include <limits.h>
-#include <sys/param.h>
-#include <sys/sysctl.h>
-#ifndef MAXINT
-#define MAXINT INT_MAX
-#endif
-#endif
-
-#ifdef __solaris__
-#include <sys/sockio.h>
-#include <stropts.h>
-#include <inet/nd.h>
-#endif
-
-#ifdef __linux__
+#if defined(__linux__)
 #include <arpa/inet.h>
 #include <net/route.h>
 #include <sys/utsname.h>
-
-#ifndef IPV6_FLOWINFO_SEND
-#define IPV6_FLOWINFO_SEND      33
 #endif
 
+#if defined(__solaris__)
+#include <inet/nd.h>
+#include <limits.h>
+#include <stropts.h>
+#include <sys/filio.h>
+#include <sys/sockio.h>
 #endif
 
-#include "jni_util.h"
-#include "jvm.h"
 #include "net_util.h"
 
 #include "java_net_SocketOptions.h"
+#include "java_net_InetAddress.h"
+
+#if defined(__linux__) && !defined(IPV6_FLOWINFO_SEND)
+#define IPV6_FLOWINFO_SEND      33
+#endif
+
+#if defined(__solaris__) && !defined(MAXINT)
+#define MAXINT INT_MAX
+#endif
 
 /*
  * EXCLBIND socket options only on Solaris
@@ -107,9 +96,9 @@ void setDefaultScopeID(JNIEnv *env, struct sockaddr *him)
 }
 
 int getDefaultScopeID(JNIEnv *env) {
+    int defaultIndex = 0;
     static jclass ni_class = NULL;
     static jfieldID ni_defaultIndexID;
-    int defaultIndex = 0;
 
     if (ni_class == NULL) {
         jclass c = (*env)->FindClass(env, "java/net/NetworkInterface");
@@ -124,6 +113,20 @@ int getDefaultScopeID(JNIEnv *env) {
     defaultIndex = (*env)->GetStaticIntField(env, ni_class,
                                              ni_defaultIndexID);
     return defaultIndex;
+}
+
+#define RESTARTABLE(_cmd, _result) do { \
+    do { \
+        _result = _cmd; \
+    } while((_result == -1) && (errno == EINTR)); \
+} while(0)
+
+int NET_SocketAvailable(int s, jint *pbytes) {
+    int result;
+    RESTARTABLE(ioctl(s, FIONREAD, pbytes), result);
+    // note: ioctl can return 0 when successful, NET_SocketAvailable
+    // is expected to return 0 on failure and 1 on success.
+    return (result == -1) ? 0 : 1;
 }
 
 #ifdef __solaris__
@@ -319,7 +322,7 @@ jint  IPv6_supported()
     SOCKADDR sa;
     socklen_t sa_len = sizeof(sa);
 
-    fd = JVM_Socket(AF_INET6, SOCK_STREAM, 0) ;
+    fd = socket(AF_INET6, SOCK_STREAM, 0) ;
     if (fd < 0) {
         /*
          *  TODO: We really cant tell since it may be an unrelated error
@@ -423,9 +426,9 @@ jint  IPv6_supported()
 }
 #endif /* DONT_ENABLE_IPV6 */
 
-void ThrowUnknownHostExceptionWithGaiError(JNIEnv *env,
-                                           const char* hostname,
-                                           int gai_error)
+void NET_ThrowUnknownHostExceptionWithGaiError(JNIEnv *env,
+                                               const char* hostname,
+                                               int gai_error)
 {
     int size;
     char *buf;
@@ -793,13 +796,15 @@ NET_InetAddressToSockaddr(JNIEnv *env, jobject iaObj, int port, struct sockaddr 
     JNU_CHECK_EXCEPTION_RETURN(env, -1);
 #ifdef AF_INET6
     /* needs work. 1. family 2. clean up him6 etc deallocate memory */
-    if (ipv6_available() && !(family == IPv4 && v4MappedAddress == JNI_FALSE)) {
+    if (ipv6_available() && !(family == java_net_InetAddress_IPv4 &&
+                              v4MappedAddress == JNI_FALSE)) {
         struct sockaddr_in6 *him6 = (struct sockaddr_in6 *)him;
         jbyte caddr[16];
         jint address;
 
 
-        if (family == IPv4) { /* will convert to IPv4-mapped address */
+        if (family == java_net_InetAddress_IPv4) {
+            // convert to IPv4-mapped address
             memset((char *) caddr, 0, 16);
             address = getInetAddress_addr(env, iaObj);
             JNU_CHECK_EXCEPTION_RETURN(env, -1);
@@ -894,7 +899,7 @@ NET_InetAddressToSockaddr(JNIEnv *env, jobject iaObj, int port, struct sockaddr 
 #else
         /* handle scope_id for solaris */
 
-        if (family != IPv4) {
+        if (family != java_net_InetAddress_IPv4) {
             if (ia6_scopeidID) {
                 him6->sin6_scope_id = getInet6Address_scopeid(env, iaObj);
             }
@@ -905,7 +910,7 @@ NET_InetAddressToSockaddr(JNIEnv *env, jobject iaObj, int port, struct sockaddr 
         {
             struct sockaddr_in *him4 = (struct sockaddr_in*)him;
             jint address;
-            if (family == IPv6) {
+            if (family == java_net_InetAddress_IPv6) {
               JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException", "Protocol family unavailable");
               return -1;
             }
@@ -913,7 +918,7 @@ NET_InetAddressToSockaddr(JNIEnv *env, jobject iaObj, int port, struct sockaddr 
             address = getInetAddress_addr(env, iaObj);
             JNU_CHECK_EXCEPTION_RETURN(env, -1);
             him4->sin_port = htons((short) port);
-            him4->sin_addr.s_addr = (uint32_t) htonl(address);
+            him4->sin_addr.s_addr = htonl(address);
             him4->sin_family = AF_INET;
             *len = sizeof(struct sockaddr_in);
         }
@@ -1335,7 +1340,8 @@ NET_SetSockOpt(int fd, int level, int  opt, const void *arg,
 #ifdef __solaris__
     if (level == SOL_SOCKET) {
         if (opt == SO_SNDBUF || opt == SO_RCVBUF) {
-            int sotype=0, arglen;
+            int sotype=0;
+            socklen_t arglen;
             int *bufsize, maxbuf;
             int ret;
 
@@ -1512,7 +1518,8 @@ NET_Bind(int fd, struct sockaddr *him, int len)
     int exclbind = -1;
 #endif
     int rv;
-    int arg, alen;
+    int arg;
+    socklen_t alen;
 
 #ifdef __linux__
     /*
@@ -1587,7 +1594,7 @@ NET_Bind(int fd, struct sockaddr *him, int len)
 }
 
 /**
- * Wrapper for select/poll with timeout on a single file descriptor.
+ * Wrapper for poll with timeout on a single file descriptor.
  *
  * flags (defined in net_util_md.h can be any combination of
  * NET_WAIT_READ, NET_WAIT_WRITE & NET_WAIT_CONNECT.
@@ -1606,47 +1613,18 @@ NET_Wait(JNIEnv *env, jint fd, jint flags, jint timeout)
 
     while (1) {
         jlong newTime;
-#ifndef USE_SELECT
-        {
-          struct pollfd pfd;
-          pfd.fd = fd;
-          pfd.events = 0;
-          if (flags & NET_WAIT_READ)
-            pfd.events |= POLLIN;
-          if (flags & NET_WAIT_WRITE)
-            pfd.events |= POLLOUT;
-          if (flags & NET_WAIT_CONNECT)
-            pfd.events |= POLLOUT;
+        struct pollfd pfd;
+        pfd.fd = fd;
+        pfd.events = 0;
+        if (flags & NET_WAIT_READ)
+          pfd.events |= POLLIN;
+        if (flags & NET_WAIT_WRITE)
+          pfd.events |= POLLOUT;
+        if (flags & NET_WAIT_CONNECT)
+          pfd.events |= POLLOUT;
 
-          errno = 0;
-          read_rv = NET_Poll(&pfd, 1, timeout);
-        }
-#else
-        {
-          fd_set rd, wr, ex;
-          struct timeval t;
-
-          t.tv_sec = timeout / 1000;
-          t.tv_usec = (timeout % 1000) * 1000;
-
-          FD_ZERO(&rd);
-          FD_ZERO(&wr);
-          FD_ZERO(&ex);
-          if (flags & NET_WAIT_READ) {
-            FD_SET(fd, &rd);
-          }
-          if (flags & NET_WAIT_WRITE) {
-            FD_SET(fd, &wr);
-          }
-          if (flags & NET_WAIT_CONNECT) {
-            FD_SET(fd, &wr);
-            FD_SET(fd, &ex);
-          }
-
-          errno = 0;
-          read_rv = NET_Select(fd+1, &rd, &wr, &ex, &t);
-        }
-#endif
+        errno = 0;
+        read_rv = NET_Poll(&pfd, 1, timeout);
 
         newTime = JVM_CurrentTimeMillis(env, 0);
         timeout -= (newTime - prevTime);

@@ -378,6 +378,7 @@ static gchar* (*fp_gtk_check_version)(guint required_major, guint required_minor
 static void gtk2_init(GtkApi* gtk);
 static void (*fp_g_free)(gpointer mem);
 static void (*fp_g_object_unref)(gpointer object);
+static GdkWindow *(*fp_gdk_get_default_root_window) (void);
 
 static int (*fp_gdk_pixbuf_get_bits_per_sample)(const GdkPixbuf *pixbuf);
 static guchar *(*fp_gdk_pixbuf_get_pixels)(const GdkPixbuf *pixbuf);
@@ -387,6 +388,14 @@ static int (*fp_gdk_pixbuf_get_n_channels)(const GdkPixbuf *pixbuf);
 static int (*fp_gdk_pixbuf_get_rowstride)(const GdkPixbuf *pixbuf);
 static int (*fp_gdk_pixbuf_get_width)(const GdkPixbuf *pixbuf);
 static GdkPixbuf *(*fp_gdk_pixbuf_new_from_file)(const char *filename, GError **error);
+static GdkColorspace (*fp_gdk_pixbuf_get_colorspace)(const GdkPixbuf *pixbuf);
+
+static GdkPixbuf *(*fp_gdk_pixbuf_get_from_drawable)(GdkPixbuf *dest,
+        GdkDrawable *src, GdkColormap *cmap, int src_x, int src_y,
+        int dest_x, int dest_y, int width, int height);
+static GdkPixbuf *(*fp_gdk_pixbuf_scale_simple)(GdkPixbuf *src,
+        int dest_width, int dest_heigh, GdkInterpType interp_type);
+
 
 static void (*fp_gtk_widget_destroy)(void *widget);
 static void (*fp_gtk_window_present)(GtkWindow *window);

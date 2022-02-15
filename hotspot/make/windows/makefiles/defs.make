@@ -262,6 +262,7 @@ ifeq ($(JVM_VARIANT_SERVER),true)
   EXPORT_LIST += $(EXPORT_SERVER_DIR)/Xusage.txt
   EXPORT_LIST += $(EXPORT_SERVER_DIR)/jvm.$(LIBRARY_SUFFIX)
   ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
       EXPORT_LIST += $(EXPORT_SERVER_DIR)/jvm.diz
     else
@@ -269,17 +270,20 @@ ifeq ($(JVM_VARIANT_SERVER),true)
       EXPORT_LIST += $(EXPORT_SERVER_DIR)/jvm.map
     endif
   endif
+  endif
 endif
 ifeq ($(JVM_VARIANT_CLIENT),true)
   EXPORT_LIST += $(EXPORT_CLIENT_DIR)/Xusage.txt
   EXPORT_LIST += $(EXPORT_CLIENT_DIR)/jvm.$(LIBRARY_SUFFIX)
   ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
       EXPORT_LIST += $(EXPORT_CLIENT_DIR)/jvm.diz
     else
       EXPORT_LIST += $(EXPORT_CLIENT_DIR)/jvm.pdb
       EXPORT_LIST += $(EXPORT_CLIENT_DIR)/jvm.map
     endif
+  endif
   endif
 endif
 
@@ -288,12 +292,14 @@ EXPORT_LIST += $(EXPORT_LIB_DIR)/jvm.lib
 ifeq ($(BUILD_WIN_SA), 1)
   EXPORT_LIST += $(EXPORT_JRE_BIN_DIR)/sawindbg.$(LIBRARY_SUFFIX)
   ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
       EXPORT_LIST += $(EXPORT_JRE_BIN_DIR)/sawindbg.diz
     else
       EXPORT_LIST += $(EXPORT_JRE_BIN_DIR)/sawindbg.pdb
       EXPORT_LIST += $(EXPORT_JRE_BIN_DIR)/sawindbg.map
     endif
+  endif
   endif
   EXPORT_LIST += $(EXPORT_LIB_DIR)/sa-jdi.jar
   # Must pass this down to nmake.

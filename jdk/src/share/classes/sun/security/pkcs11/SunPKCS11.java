@@ -167,6 +167,7 @@ public final class SunPKCS11 extends AuthProvider {
             try {
                 String nssLibraryDirectory = config.getNssLibraryDirectory();
                 String nssSecmodDirectory = config.getNssSecmodDirectory();
+                int errorHandling = config.getHandleStartupErrors();
                 boolean nssOptimizeSpace = config.getNssOptimizeSpace();
 
                 if (secmod.isInitialized()) {
@@ -174,20 +175,30 @@ public final class SunPKCS11 extends AuthProvider {
                         String s = secmod.getConfigDir();
                         if ((s != null) &&
                                 (s.equals(nssSecmodDirectory) == false)) {
-                            throw new ProviderException("Secmod directory "
-                                + nssSecmodDirectory
-                                + " invalid, NSS already initialized with "
-                                + s);
+                            String msg = "Secmod directory " + nssSecmodDirectory
+                                + " invalid, NSS already initialized with " + s;
+                            if (errorHandling == Config.ERR_IGNORE_MULTI_INIT ||
+                                errorHandling == Config.ERR_IGNORE_ALL) {
+                                throw new UnsupportedOperationException(msg);
+                            } else {
+                                throw new ProviderException(msg);
+                            }
                         }
                     }
                     if (nssLibraryDirectory != null) {
                         String s = secmod.getLibDir();
                         if ((s != null) &&
                                 (s.equals(nssLibraryDirectory) == false)) {
-                            throw new ProviderException("NSS library directory "
+                            String msg = "NSS library directory "
                                 + nssLibraryDirectory
                                 + " invalid, NSS already initialized with "
-                                + s);
+                                + s;
+                            if (errorHandling == Config.ERR_IGNORE_MULTI_INIT ||
+                                errorHandling == Config.ERR_IGNORE_ALL) {
+                                throw new UnsupportedOperationException(msg);
+                            } else {
+                                throw new ProviderException(msg);
+                            }
                         }
                     }
                 } else {

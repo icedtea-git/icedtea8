@@ -26,6 +26,8 @@
  * @bug 6316539
  * @summary Known-answer-test for TlsKeyMaterial generator
  * @author Andreas Sterbenz
+ * @run main/othervm TestKeyMaterial
+ * @run main/othervm TestKeyMaterial sm policy
  * @library ..
  * @run main/othervm TestKeyMaterial
  * @run main/othervm TestKeyMaterial sm policy

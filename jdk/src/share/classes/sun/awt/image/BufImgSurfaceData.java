@@ -46,6 +46,8 @@ public class BufImgSurfaceData extends SurfaceData {
     BufferedImage bufImg;
     private BufferedImageGraphicsConfig graphicsConfig;
     RenderLoops solidloops;
+    private final double scaleX;
+    private final double scaleY;
 
     private static native void initIDs(Class ICM, Class ICMColorData);
 
@@ -69,6 +71,12 @@ public class BufImgSurfaceData extends SurfaceData {
     }
 
     public static SurfaceData createData(BufferedImage bufImg) {
+        return createData(bufImg, 1, 1);
+    }
+
+    public static SurfaceData createData(BufferedImage bufImg,
+                                         double scaleX, double scaleY)
+    {
         if (bufImg == null) {
             throw new NullPointerException("BufferedImage cannot be null");
         }
@@ -78,31 +86,36 @@ public class BufImgSurfaceData extends SurfaceData {
         // REMIND: Check the image type and pick an appropriate subclass
         switch (type) {
         case BufferedImage.TYPE_INT_BGR:
-            sData = createDataIC(bufImg, SurfaceType.IntBgr);
+            sData = createDataIC(bufImg, SurfaceType.IntBgr, scaleX, scaleY);
             break;
         case BufferedImage.TYPE_INT_RGB:
-            sData = createDataIC(bufImg, SurfaceType.IntRgb);
+            sData = createDataIC(bufImg, SurfaceType.IntRgb, scaleX, scaleY);
             break;
         case BufferedImage.TYPE_INT_ARGB:
-            sData = createDataIC(bufImg, SurfaceType.IntArgb);
+            sData = createDataIC(bufImg, SurfaceType.IntArgb, scaleX, scaleY);
             break;
         case BufferedImage.TYPE_INT_ARGB_PRE:
-            sData = createDataIC(bufImg, SurfaceType.IntArgbPre);
+            sData = createDataIC(bufImg, SurfaceType.IntArgbPre, scaleX, scaleY);
             break;
         case BufferedImage.TYPE_3BYTE_BGR:
-            sData = createDataBC(bufImg, SurfaceType.ThreeByteBgr, 2);
+            sData = createDataBC(bufImg, SurfaceType.ThreeByteBgr, 2,
+                                 scaleX, scaleY);
             break;
         case BufferedImage.TYPE_4BYTE_ABGR:
-            sData = createDataBC(bufImg, SurfaceType.FourByteAbgr, 3);
+            sData = createDataBC(bufImg, SurfaceType.FourByteAbgr, 3,
+                                 scaleX, scaleY);
             break;
         case BufferedImage.TYPE_4BYTE_ABGR_PRE:
-            sData = createDataBC(bufImg, SurfaceType.FourByteAbgrPre, 3);
+            sData = createDataBC(bufImg, SurfaceType.FourByteAbgrPre, 3,
+                                 scaleX, scaleY);
             break;
         case BufferedImage.TYPE_USHORT_565_RGB:
-            sData = createDataSC(bufImg, SurfaceType.Ushort565Rgb, null);
+            sData = createDataSC(bufImg, SurfaceType.Ushort565Rgb, null,
+                                 scaleX, scaleY);
             break;
         case BufferedImage.TYPE_USHORT_555_RGB:
-            sData = createDataSC(bufImg, SurfaceType.Ushort555Rgb, null);
+            sData = createDataSC(bufImg, SurfaceType.Ushort555Rgb, null,
+                                 scaleX, scaleY);
             break;
         case BufferedImage.TYPE_BYTE_INDEXED:
             {
@@ -124,14 +137,16 @@ public class BufImgSurfaceData extends SurfaceData {
                 default:
                     throw new InternalError("Unrecognized transparency");
                 }
-                sData = createDataBC(bufImg, sType, 0);
+                sData = createDataBC(bufImg, sType, 0, scaleX, scaleY);
             }
             break;
         case BufferedImage.TYPE_BYTE_GRAY:
-            sData = createDataBC(bufImg, SurfaceType.ByteGray, 0);
+            sData = createDataBC(bufImg, SurfaceType.ByteGray, 0,
+                                 scaleX, scaleY);
             break;
         case BufferedImage.TYPE_USHORT_GRAY:
-            sData = createDataSC(bufImg, SurfaceType.UshortGray, null);
+            sData = createDataSC(bufImg, SurfaceType.UshortGray, null,
+                                 scaleX, scaleY);
             break;
         case BufferedImage.TYPE_BYTE_BINARY:
             {
@@ -150,7 +165,7 @@ public class BufImgSurfaceData extends SurfaceData {
                 default:
                     throw new InternalError("Unrecognized pixel size");
                 }
-                sData = createDataBP(bufImg, sType);
+                sData = createDataBP(bufImg, sType, scaleX, scaleY);
             }
             break;
         case BufferedImage.TYPE_CUSTOM:
@@ -187,7 +202,7 @@ public class BufImgSurfaceData extends SurfaceData {
                             sType = SurfaceType.AnyDcm;
                         }
                     }
-                    sData = createDataIC(bufImg, sType);
+                    sData = createDataIC(bufImg, sType, scaleX, scaleY);
                     break;
                 } else if (raster instanceof ShortComponentRaster &&
                            raster.getNumDataElements() == 1 &&
@@ -229,11 +244,12 @@ public class BufImgSurfaceData extends SurfaceData {
                             icm = null;
                         }
                     }
-                    sData = createDataSC(bufImg, sType, icm);
+                    sData = createDataSC(bufImg, sType, icm, scaleX, scaleY);
                     break;
                 }
-                sData = new BufImgSurfaceData(raster.getDataBuffer(),
-                                              bufImg, SurfaceType.Custom);
+                sData = new BufImgSurfaceData(raster.getDataBuffer(), bufImg,
+                                              SurfaceType.Custom,
+                                              scaleX, scaleY);
             }
             break;
         }
@@ -246,11 +262,15 @@ public class BufImgSurfaceData extends SurfaceData {
     }
 
     public static SurfaceData createDataIC(BufferedImage bImg,
-                                           SurfaceType sType) {
+                                           SurfaceType sType,
+                                           double scaleX,
+                                           double scaleY)
+    {
         IntegerComponentRaster icRaster =
             (IntegerComponentRaster)bImg.getRaster();
         BufImgSurfaceData bisd =
-            new BufImgSurfaceData(icRaster.getDataBuffer(), bImg, sType);
+            new BufImgSurfaceData(icRaster.getDataBuffer(), bImg, sType,
+                                  scaleX, scaleY);
         bisd.initRaster(icRaster.getDataStorage(),
                         icRaster.getDataOffset(0) * 4, 0,
                         icRaster.getWidth(),
@@ -263,11 +283,14 @@ public class BufImgSurfaceData extends SurfaceData {
 
     public static SurfaceData createDataSC(BufferedImage bImg,
                                            SurfaceType sType,
-                                           IndexColorModel icm) {
+                                           IndexColorModel icm,
+                                           double scaleX, double scaleY)
+    {
         ShortComponentRaster scRaster =
             (ShortComponentRaster)bImg.getRaster();
         BufImgSurfaceData bisd =
-            new BufImgSurfaceData(scRaster.getDataBuffer(), bImg, sType);
+            new BufImgSurfaceData(scRaster.getDataBuffer(), bImg, sType,
+                                  scaleX, scaleY);
         bisd.initRaster(scRaster.getDataStorage(),
                         scRaster.getDataOffset(0) * 2, 0,
                         scRaster.getWidth(),
@@ -280,11 +303,14 @@ public class BufImgSurfaceData extends SurfaceData {
 
     public static SurfaceData createDataBC(BufferedImage bImg,
                                            SurfaceType sType,
-                                           int primaryBank) {
+                                           int primaryBank,
+                                           double scaleX, double scaleY)
+    {
         ByteComponentRaster bcRaster =
             (ByteComponentRaster)bImg.getRaster();
         BufImgSurfaceData bisd =
-            new BufImgSurfaceData(bcRaster.getDataBuffer(), bImg, sType);
+            new BufImgSurfaceData(bcRaster.getDataBuffer(), bImg, sType,
+                                  scaleX, scaleY);
         ColorModel cm = bImg.getColorModel();
         IndexColorModel icm = ((cm instanceof IndexColorModel)
                                ? (IndexColorModel) cm
@@ -300,11 +326,14 @@ public class BufImgSurfaceData extends SurfaceData {
     }
 
     public static SurfaceData createDataBP(BufferedImage bImg,
-                                           SurfaceType sType) {
+                                           SurfaceType sType,
+                                           double scaleX, double scaleY)
+    {
         BytePackedRaster bpRaster =
             (BytePackedRaster)bImg.getRaster();
         BufImgSurfaceData bisd =
-            new BufImgSurfaceData(bpRaster.getDataBuffer(), bImg, sType);
+            new BufImgSurfaceData(bpRaster.getDataBuffer(), bImg, sType,
+                                  scaleX, scaleY);
         ColorModel cm = bImg.getColorModel();
         IndexColorModel icm = ((cm instanceof IndexColorModel)
                                ? (IndexColorModel) cm
@@ -346,15 +375,22 @@ public class BufImgSurfaceData extends SurfaceData {
                                      IndexColorModel icm);
 
     public BufImgSurfaceData(DataBuffer db,
-                             BufferedImage bufImg, SurfaceType sType)
+                             BufferedImage bufImg,
+                             SurfaceType sType,
+                             double scaleX,
+                             double scaleY)
     {
         super(SunWritableRaster.stealTrackable(db),
               sType, bufImg.getColorModel());
         this.bufImg = bufImg;
+        this.scaleX = scaleX;
+        this.scaleY = scaleY;
     }
 
     protected BufImgSurfaceData(SurfaceType surfaceType, ColorModel cm) {
         super(surfaceType, cm);
+        this.scaleX = 1;
+        this.scaleY = 1;
     }
 
     public void initSolidLoops() {
@@ -391,7 +427,8 @@ public class BufImgSurfaceData extends SurfaceData {
 
     public synchronized GraphicsConfiguration getDeviceConfiguration() {
         if (graphicsConfig == null) {
-            graphicsConfig = BufferedImageGraphicsConfig.getConfig(bufImg);
+            graphicsConfig = BufferedImageGraphicsConfig
+                    .getConfig(bufImg, scaleX, scaleY);
         }
         return graphicsConfig;
     }
@@ -410,6 +447,16 @@ public class BufImgSurfaceData extends SurfaceData {
      */
     public Object getDestination() {
         return bufImg;
+    }
+
+    @Override
+    public double getDefaultScaleX() {
+        return scaleX;
+    }
+
+    @Override
+    public double getDefaultScaleY() {
+        return scaleY;
     }
 
     public static final class ICMColorData {

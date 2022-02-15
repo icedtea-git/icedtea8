@@ -60,9 +60,11 @@ $(AOUT): $(Res_Files) $(Obj_Files) vm.def
 	$(MT) /manifest $@.manifest /outputresource:$@;#2
 !endif
 !if "$(ENABLE_FULL_DEBUG_SYMBOLS)" == "1"
+!if "$(STRIP_POLICY)" != "no_strip"
 !if "$(ZIP_DEBUGINFO_FILES)" == "1"
 	$(ZIPEXE) -q $*.diz $*.map $*.pdb
 	$(RM) $*.map $*.pdb
+!endif
 !endif
 !endif
 

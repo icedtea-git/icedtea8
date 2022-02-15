@@ -22,24 +22,13 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-#include <windows.h>
-#include <winsock2.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <malloc.h>
-#include <sys/types.h>
 
-#include "java_net_SocketOptions.h"
-#include "java_net_TwoStacksPlainSocketImpl.h"
-#include "java_net_InetAddress.h"
-#include "java_io_FileDescriptor.h"
-#include "java_lang_Integer.h"
-
-#include "jvm.h"
 #include "net_util.h"
-#include "jni_util.h"
+
+#include "java_net_TwoStacksPlainSocketImpl.h"
+#include "java_net_SocketOptions.h"
+#include "java_net_InetAddress.h"
 
 /************************************************************************
  * TwoStacksPlainSocketImpl
@@ -416,7 +405,7 @@ Java_java_net_TwoStacksPlainSocketImpl_socketBind(JNIEnv *env, jobject this,
     family = getInetAddress_family(env, iaObj);
     JNU_CHECK_EXCEPTION(env);
 
-    if (family == IPv6 && !ipv6_supported) {
+    if (family == java_net_InetAddress_IPv6 && !ipv6_supported) {
         JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException",
                         "Protocol family not supported");
         return;
@@ -479,7 +468,7 @@ Java_java_net_TwoStacksPlainSocketImpl_socketBind(JNIEnv *env, jobject this,
     }
 
     if (rv == -1) {
-        NET_ThrowCurrent(env, "JVM_Bind");
+        NET_ThrowCurrent(env, "NET_Bind");
         return;
     }
 
@@ -581,7 +570,6 @@ Java_java_net_TwoStacksPlainSocketImpl_socketAccept(JNIEnv *env, jobject this,
 {
     /* fields on this */
     jint port;
-    jint scope;
     jint timeout = (*env)->GetIntField(env, this, psi_timeoutID);
     jobject fdObj = (*env)->GetObjectField(env, this, psi_fdID);
     jobject fd1Obj = (*env)->GetObjectField(env, this, psi_fd1ID);
@@ -659,18 +647,18 @@ Java_java_net_TwoStacksPlainSocketImpl_socketAccept(JNIEnv *env, jobject this,
             return;
         }
         if (fd2 == fd) { /* v4 */
-            len = sizeof (struct sockaddr_in);
+            len = sizeof(struct sockaddr_in);
         } else {
-            len = sizeof (struct SOCKADDR_IN6);
+            len = sizeof(struct sockaddr_in6);
         }
         fd = fd2;
     } else {
         int ret;
         if (fd1 != -1) {
             fd = fd1;
-            len = sizeof (struct SOCKADDR_IN6);
+            len = sizeof(struct sockaddr_in6);
         } else {
-            len = sizeof (struct sockaddr_in);
+            len = sizeof(struct sockaddr_in);
         }
         if (timeout) {
             ret = NET_Timeout(fd, timeout);
@@ -733,7 +721,7 @@ Java_java_net_TwoStacksPlainSocketImpl_socketAccept(JNIEnv *env, jobject this,
 
         setInetAddress_addr(env, socketAddressObj, ntohl(him.him4.sin_addr.s_addr));
         JNU_CHECK_EXCEPTION(env);
-        setInetAddress_family(env, socketAddressObj, IPv4);
+        setInetAddress_family(env, socketAddressObj, java_net_InetAddress_IPv4);
         JNU_CHECK_EXCEPTION(env);
         (*env)->SetObjectField(env, socket, psi_addressID, socketAddressObj);
     } else {
@@ -759,8 +747,8 @@ Java_java_net_TwoStacksPlainSocketImpl_socketAccept(JNIEnv *env, jobject this,
             NET_SocketClose(fd);
             return;
         }
-        setInet6Address_ipaddress(env, socketAddressObj, (const char *)&him.him6.sin6_addr);
-        setInetAddress_family(env, socketAddressObj, IPv6);
+        setInet6Address_ipaddress(env, socketAddressObj, (char *)&him.him6.sin6_addr);
+        setInetAddress_family(env, socketAddressObj, java_net_InetAddress_IPv6);
         JNU_CHECK_EXCEPTION(env);
         setInet6Address_scopeid(env, socketAddressObj, him.him6.sin6_scope_id);
 
@@ -1176,12 +1164,8 @@ Java_java_net_TwoStacksPlainSocketImpl_socketSendUrgentData(JNIEnv *env, jobject
 
     }
     n = send(fd, (char *)&data, 1, MSG_OOB);
-    if (n == JVM_IO_ERR) {
+    if (n == -1) {
         NET_ThrowCurrent(env, "send");
-        return;
-    }
-    if (n == JVM_IO_INTR) {
-        JNU_ThrowByName(env, "java/io/InterruptedIOException", 0);
         return;
     }
 }

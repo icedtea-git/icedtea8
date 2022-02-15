@@ -312,7 +312,8 @@ typedef enum
     GTK_FONT_NAME,
     GTK_ICON_SIZES,
     GTK_CURSOR_BLINK,
-    GTK_CURSOR_BLINK_TIME
+    GTK_CURSOR_BLINK_TIME,
+    GTK_BUTTON_ORDER
 } Setting;
 
 typedef enum

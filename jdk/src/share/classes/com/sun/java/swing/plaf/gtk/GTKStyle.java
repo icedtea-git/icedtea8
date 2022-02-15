@@ -27,7 +27,6 @@ package com.sun.java.swing.plaf.gtk;
 
 import java.awt.*;
 import java.lang.reflect.*;
-import java.security.*;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.plaf.*;
@@ -953,7 +952,7 @@ class GTKStyle extends SynthStyle implements GTKConstants {
 
     static class GTKStockIconInfo {
         private static Map<String,Integer> ICON_TYPE_MAP;
-        private static final Object ICON_SIZE_KEY = new StringBuffer("IconSize");
+        private static final Object ICON_SIZE_KEY = new Object(); // IconSize
 
         private static Dimension[] getIconSizesMap() {
             AppContext appContext = AppContext.getAppContext();

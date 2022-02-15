@@ -42,9 +42,9 @@ AC_DEFUN([PLATFORM_EXTRACT_VARS_FROM_CPU],
       VAR_CPU_BITS=32
       VAR_CPU_ENDIAN=little
       ;;
-    arm*)
-      VAR_CPU=arm
-      VAR_CPU_ARCH=arm
+    arm*|aarch32)
+      VAR_CPU=aarch32
+      VAR_CPU_ARCH=aarch32
       VAR_CPU_BITS=32
       VAR_CPU_ENDIAN=little
       ;;
@@ -187,6 +187,10 @@ AC_DEFUN([PLATFORM_EXTRACT_TARGET_AND_BUILD],
 
   AC_MSG_CHECKING([openjdk-build os-cpu])
   AC_MSG_RESULT([$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU])
+  AC_MSG_CHECKING([openjdk-build bit-size])
+  AC_MSG_RESULT([$OPENJDK_BUILD_CPU_BITS])
+  AC_MSG_CHECKING([openjdk-build endianness])
+  AC_MSG_RESULT([$OPENJDK_BUILD_CPU_ENDIAN])
 
   # Convert the autoconf OS/CPU value to our own data, into the VAR_OS/CPU variables.
   PLATFORM_EXTRACT_VARS_FROM_OS($host_os)
@@ -209,6 +213,10 @@ AC_DEFUN([PLATFORM_EXTRACT_TARGET_AND_BUILD],
 
   AC_MSG_CHECKING([openjdk-target os-cpu])
   AC_MSG_RESULT([$OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU])
+  AC_MSG_CHECKING([openjdk-target bit-size])
+  AC_MSG_RESULT([$OPENJDK_TARGET_CPU_BITS])
+  AC_MSG_CHECKING([openjdk-target endianness])
+  AC_MSG_RESULT([$OPENJDK_TARGET_CPU_ENDIAN])
 ])
 
 # Check if a reduced build (32-bit on 64-bit platforms) is requested, and modify behaviour
@@ -316,6 +324,8 @@ AC_DEFUN([PLATFORM_SETUP_LEGACY_VARS],
   elif test "x$OPENJDK_TARGET_OS" != xmacosx && test "x$OPENJDK_TARGET_CPU" = xx86_64; then
     # On all platforms except macosx, we replace x86_64 with amd64.
     OPENJDK_TARGET_CPU_OSARCH="amd64"
+  elif test "x$OPENJDK_TARGET_CPU" = xaarch32; then
+    OPENJDK_TARGET_CPU_OSARCH="arm"
   fi
   AC_SUBST(OPENJDK_TARGET_CPU_OSARCH)
 

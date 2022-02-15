@@ -26,6 +26,7 @@
  * @bug 8047031
  * @summary SocketPermission tests for legacy socket types
  * @run testng/othervm SocketPermissionTest
+ * @key intermittent
  */
 import java.io.IOException;
 import java.net.DatagramPacket;

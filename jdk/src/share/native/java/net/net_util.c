@@ -23,18 +23,17 @@
  * questions.
  */
 
-#include "jni.h"
-#include "jvm.h"
-#include "jni_util.h"
 #include "net_util.h"
 
-int IPv6_supported() ;
+#include "java_net_InetAddress.h"
+
+int IPv6_supported();
 
 static int IPv6_available;
 
 JNIEXPORT jint JNICALL ipv6_available()
 {
-    return IPv6_available ;
+    return IPv6_available;
 }
 
 JNIEXPORT jint JNICALL
@@ -46,13 +45,10 @@ JNI_OnLoad(JavaVM *vm, void *reserved)
     jstring s;
     jint preferIPv4Stack;
 
-    if ((*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_2) == JNI_OK) {
-        if (JVM_InitializeSocketLibrary() < 0) {
-            JNU_ThrowByName(env, "java/lang/UnsatisfiedLinkError",
-                            "failed to initialize net library.");
-            return JNI_VERSION_1_2;
-        }
+    if ((*vm)->GetEnv(vm, (void**) &env, JNI_VERSION_1_2) != JNI_OK) {
+        return JNI_EVERSION; /* JNI version not supported */
     }
+
     iCls = (*env)->FindClass(env, "java/lang/Boolean");
     CHECK_NULL_RETURN(iCls, JNI_VERSION_1_2);
     mid = (*env)->GetStaticMethodID(env, iCls, "getBoolean", "(Ljava/lang/String;)Z");
@@ -108,7 +104,7 @@ jobject getInet6Address_scopeifname(JNIEnv *env, jobject iaObj) {
     return (*env)->GetObjectField(env, holder, ia6_scopeifnameID);
 }
 
-int setInet6Address_scopeifname(JNIEnv *env, jobject iaObj, jobject scopeifname) {
+jboolean setInet6Address_scopeifname(JNIEnv *env, jobject iaObj, jobject scopeifname) {
     jobject holder = (*env)->GetObjectField(env, iaObj, ia6_holder6ID);
     CHECK_NULL_RETURN(holder, JNI_FALSE);
     (*env)->SetObjectField(env, holder, ia6_scopeifnameID, scopeifname);
@@ -127,20 +123,18 @@ int getInet6Address_scopeid(JNIEnv *env, jobject iaObj) {
     return (*env)->GetIntField(env, holder, ia6_scopeidID);
 }
 
-int setInet6Address_scopeid(JNIEnv *env, jobject iaObj, int scopeid) {
+jboolean setInet6Address_scopeid(JNIEnv *env, jobject iaObj, int scopeid) {
     jobject holder = (*env)->GetObjectField(env, iaObj, ia6_holder6ID);
     CHECK_NULL_RETURN(holder, JNI_FALSE);
     (*env)->SetIntField(env, holder, ia6_scopeidID, scopeid);
     if (scopeid > 0) {
-            (*env)->SetBooleanField(env, holder, ia6_scopeidsetID, JNI_TRUE);
+        (*env)->SetBooleanField(env, holder, ia6_scopeidsetID, JNI_TRUE);
     }
     return JNI_TRUE;
 }
 
-
-int getInet6Address_ipaddress(JNIEnv *env, jobject iaObj, char *dest) {
+jboolean getInet6Address_ipaddress(JNIEnv *env, jobject iaObj, char *dest) {
     jobject holder, addr;
-    jbyteArray barr;
 
     holder = (*env)->GetObjectField(env, iaObj, ia6_holder6ID);
     CHECK_NULL_RETURN(holder, JNI_FALSE);
@@ -150,7 +144,7 @@ int getInet6Address_ipaddress(JNIEnv *env, jobject iaObj, char *dest) {
     return JNI_TRUE;
 }
 
-int setInet6Address_ipaddress(JNIEnv *env, jobject iaObj, char *address) {
+jboolean setInet6Address_ipaddress(JNIEnv *env, jobject iaObj, char *address) {
     jobject holder;
     jbyteArray addr;
 
@@ -208,12 +202,7 @@ NET_SockaddrToInetAddress(JNIEnv *env, struct sockaddr *him, int *port) {
     jobject iaObj;
 #ifdef AF_INET6
     if (him->sa_family == AF_INET6) {
-        jbyteArray ipaddress;
-#ifdef WIN32
-        struct SOCKADDR_IN6 *him6 = (struct SOCKADDR_IN6 *)him;
-#else
         struct sockaddr_in6 *him6 = (struct sockaddr_in6 *)him;
-#endif
         jbyte *caddr = (jbyte *)&(him6->sin6_addr);
         if (NET_IsIPv4Mapped(caddr)) {
             int address;
@@ -222,16 +211,17 @@ NET_SockaddrToInetAddress(JNIEnv *env, struct sockaddr *him, int *port) {
             address = NET_IPv4MappedToIPv4(caddr);
             setInetAddress_addr(env, iaObj, address);
             JNU_CHECK_EXCEPTION_RETURN(env, NULL);
-            setInetAddress_family(env, iaObj, IPv4);
+            setInetAddress_family(env, iaObj, java_net_InetAddress_IPv4);
             JNU_CHECK_EXCEPTION_RETURN(env, NULL);
         } else {
             jint scope;
-            int ret;
+            jboolean ret;
             iaObj = (*env)->NewObject(env, ia6_class, ia6_ctrID);
             CHECK_NULL_RETURN(iaObj, NULL);
             ret = setInet6Address_ipaddress(env, iaObj, (char *)&(him6->sin6_addr));
-            CHECK_NULL_RETURN(ret, NULL);
-            setInetAddress_family(env, iaObj, IPv6);
+            if (ret == JNI_FALSE)
+                return NULL;
+            setInetAddress_family(env, iaObj, java_net_InetAddress_IPv6);
             JNU_CHECK_EXCEPTION_RETURN(env, NULL);
             scope = getScopeID(him);
             setInet6Address_scopeid(env, iaObj, scope);
@@ -243,7 +233,7 @@ NET_SockaddrToInetAddress(JNIEnv *env, struct sockaddr *him, int *port) {
             struct sockaddr_in *him4 = (struct sockaddr_in *)him;
             iaObj = (*env)->NewObject(env, ia4_class, ia4_ctrID);
             CHECK_NULL_RETURN(iaObj, NULL);
-            setInetAddress_family(env, iaObj, IPv4);
+            setInetAddress_family(env, iaObj, java_net_InetAddress_IPv4);
             JNU_CHECK_EXCEPTION_RETURN(env, NULL);
             setInetAddress_addr(env, iaObj, ntohl(him4->sin_addr.s_addr));
             JNU_CHECK_EXCEPTION_RETURN(env, NULL);
@@ -258,14 +248,11 @@ NET_SockaddrEqualsInetAddress(JNIEnv *env, struct sockaddr *him, jobject iaObj)
     jint family = AF_INET;
 
 #ifdef AF_INET6
-    family = getInetAddress_family(env, iaObj) == IPv4? AF_INET : AF_INET6;
+    family = getInetAddress_family(env, iaObj) == java_net_InetAddress_IPv4 ?
+        AF_INET : AF_INET6;
     JNU_CHECK_EXCEPTION_RETURN(env, JNI_FALSE);
     if (him->sa_family == AF_INET6) {
-#ifdef WIN32
-        struct SOCKADDR_IN6 *him6 = (struct SOCKADDR_IN6 *)him;
-#else
         struct sockaddr_in6 *him6 = (struct sockaddr_in6 *)him;
-#endif
         jbyte *caddrNew = (jbyte *)&(him6->sin6_addr);
         if (NET_IsIPv4Mapped(caddrNew)) {
             int addrNew;
@@ -282,7 +269,6 @@ NET_SockaddrEqualsInetAddress(JNIEnv *env, struct sockaddr *him, jobject iaObj)
                 return JNI_FALSE;
             }
         } else {
-            jbyteArray ipaddress;
             jbyte caddrCur[16];
             int scope;
 

@@ -139,6 +139,7 @@ $(LIBSAPROC): $(SASRCFILES) $(SAMAPFILE)
 	           -o $@                                                \
 	           $(SALIBS)
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(OS_VENDOR), Darwin)
 	$(DSYMUTIL) $@
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
@@ -161,6 +162,7 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
 	$(RM) $(LIBSAPROC_DEBUGINFO)
     endif
   endif
+endif
 endif
 
 install_saproc: $(BUILDLIBSAPROC)

@@ -22,15 +22,15 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-#include <windows.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <malloc.h>
-#include <sys/types.h>
+
+#include "net_util.h"
+#include "NetworkInterface.h"
+
+#include "java_net_TwoStacksPlainDatagramSocketImpl.h"
+#include "java_net_SocketOptions.h"
+#include "java_net_NetworkInterface.h"
+#include "java_net_InetAddress.h"
 
 #ifndef IPTOS_TOS_MASK
 #define IPTOS_TOS_MASK 0x1e
@@ -39,14 +39,6 @@
 #define IPTOS_PREC_MASK 0xe0
 #endif
 
-#include "java_net_TwoStacksPlainDatagramSocketImpl.h"
-#include "java_net_SocketOptions.h"
-#include "java_net_NetworkInterface.h"
-
-#include "NetworkInterface.h"
-#include "jvm.h"
-#include "jni_util.h"
-#include "net_util.h"
 
 #define IN_CLASSD(i)    (((long)(i) & 0xf0000000) == 0xe0000000)
 #define IN_MULTICAST(i) IN_CLASSD(i)
@@ -355,7 +347,7 @@ static jboolean purgeOutstandingICMP(JNIEnv *env, jobject this, jint fd)
             break;
         }
         if (recvfrom(fd, buf, 1, MSG_PEEK,
-                         (struct sockaddr *)&rmtaddr, &addrlen) != JVM_IO_ERR) {
+                         (struct sockaddr *)&rmtaddr, &addrlen) != SOCKET_ERROR) {
             break;
         }
         if (WSAGetLastError() != WSAECONNRESET) {
@@ -440,7 +432,7 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_bind0(JNIEnv *env, jobject this,
 
     family = getInetAddress_family(env, addressObj);
     JNU_CHECK_EXCEPTION(env);
-    if (family == IPv6 && !ipv6_supported) {
+    if (family == java_net_InetAddress_IPv6 && !ipv6_supported) {
         JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException",
                         "Protocol family not supported");
         return;
@@ -516,7 +508,7 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_bind0(JNIEnv *env, jobject this,
             fd = fd1;
         }
         if (getsockname(fd, (struct sockaddr *)&lcladdr, &lcladdrlen) == -1) {
-            NET_ThrowCurrent(env, "JVM_GetSockName");
+            NET_ThrowCurrent(env, "getsockname");
             return;
         }
         port = ntohs((u_short) GET_PORT (&lcladdr));
@@ -566,13 +558,13 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_connect0(JNIEnv *env, jobject thi
     JNU_CHECK_EXCEPTION(env);
     family = getInetAddress_family(env, address);
     JNU_CHECK_EXCEPTION(env);
-    if (family == IPv6 && !ipv6_supported) {
+    if (family == java_net_InetAddress_IPv6 && !ipv6_supported) {
         JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException",
                         "Protocol family not supported");
         return;
     }
 
-    fdc = family == IPv4? fd: fd1;
+    fdc = family == java_net_InetAddress_IPv4 ? fd : fd1;
 
     if (xp_or_later) {
         /* SIO_UDP_CONNRESET fixes a bug introduced in Windows 2000, which
@@ -609,12 +601,12 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_disconnect0(JNIEnv *env, jobject 
     jint fd, len;
     SOCKETADDRESS addr;
 
-    if (family == IPv4) {
+    if (family == java_net_InetAddress_IPv4) {
         fdObj = (*env)->GetObjectField(env, this, pdsi_fdID);
-        len = sizeof (struct sockaddr_in);
+        len = sizeof(struct sockaddr_in);
     } else {
         fdObj = (*env)->GetObjectField(env, this, pdsi_fd1ID);
-        len = sizeof (struct SOCKADDR_IN6);
+        len = sizeof(struct sockaddr_in6);
     }
 
     if (IS_NULL(fdObj)) {
@@ -684,7 +676,7 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_send(JNIEnv *env, jobject this,
 
     family = getInetAddress_family(env, iaObj);
     JNU_CHECK_EXCEPTION(env);
-    if (family == IPv4) {
+    if (family == java_net_InetAddress_IPv4) {
         fdObj = (*env)->GetObjectField(env, this, pdsi_fdID);
     } else {
         if (!ipv6_available()) {
@@ -711,7 +703,7 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_send(JNIEnv *env, jobject this,
     }
 
     if (connected) {
-        addrp = 0; /* arg to JVM_Sendto () null in this case */
+        addrp = 0; /* arg to sendto () null in this case */
         addrlen = 0;
     } else {
       if (NET_InetAddressToSockaddr(env, iaObj, packetPort, (struct sockaddr *)&rmtaddr, &addrlen, JNI_FALSE) != 0) {
@@ -769,15 +761,9 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_send(JNIEnv *env, jobject this,
 
     (*env)->GetByteArrayRegion(env, packetBuffer, packetBufferOffset, packetBufferLen,
                                (jbyte *)fullPacket);
-    switch (sendto(fd, fullPacket, packetBufferLen, 0,
-                       (struct sockaddr *)addrp, addrlen)) {
-        case JVM_IO_ERR:
-            NET_ThrowCurrent(env, "Datagram send failed");
-            break;
-
-        case JVM_IO_INTR:
-            JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                            "operation interrupted");
+    if (sendto(fd, fullPacket, packetBufferLen, 0,
+               (struct sockaddr *)addrp, addrlen) == SOCKET_ERROR) {
+         NET_ThrowCurrent(env, "Datagram send failed");
     }
 
     if (packetBufferLen > MAX_BUFFER_LEN) {
@@ -865,12 +851,8 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_peek(JNIEnv *env, jobject this,
                 JNU_ThrowByName(env, JNU_JAVANETPKG "SocketTimeoutException",
                                 "Peek timed out");
                 return ret;
-            } else if (ret == JVM_IO_ERR) {
+            } else if (ret == -1) {
                 NET_ThrowCurrent(env, "timeout in datagram socket peek");
-                return ret;
-            } else if (ret == JVM_IO_INTR) {
-                JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                                "operation interrupted");
                 return ret;
             }
         }
@@ -879,7 +861,7 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_peek(JNIEnv *env, jobject this,
         n = recvfrom(fd, buf, 1, MSG_PEEK,
                          (struct sockaddr *)&remote_addr, &remote_addrsize);
 
-        if (n == JVM_IO_ERR) {
+        if (n == SOCKET_ERROR) {
             if (WSAGetLastError() == WSAECONNRESET) {
                 jboolean connected;
 
@@ -919,17 +901,13 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_peek(JNIEnv *env, jobject this,
         }
     } while (retry);
 
-    if (n == JVM_IO_ERR && WSAGetLastError() != WSAEMSGSIZE) {
+    if (n == SOCKET_ERROR && WSAGetLastError() != WSAEMSGSIZE) {
         NET_ThrowCurrent(env, "Datagram peek failed");
-        return 0;
-    }
-    if (n == JVM_IO_INTR) {
-        JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException", 0);
         return 0;
     }
     setInetAddress_addr(env, addressObj, ntohl(remote_addr.sin_addr.s_addr));
     JNU_CHECK_EXCEPTION_RETURN(env, -1);
-    setInetAddress_family(env, addressObj, IPv4);
+    setInetAddress_family(env, addressObj, java_net_InetAddress_IPv4);
     JNU_CHECK_EXCEPTION_RETURN(env, -1);
 
     /* return port */
@@ -1051,11 +1029,8 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_peekData(JNIEnv *env, jobject thi
                 if (ret == 0) {
                     JNU_ThrowByName(env,JNU_JAVANETPKG "SocketTimeoutException",
                                         "Peek timed out");
-                } else if (ret == JVM_IO_ERR) {
+                } else if (ret == -1) {
                     NET_ThrowCurrent(env, "timeout in datagram socket peek");
-                } else if (ret == JVM_IO_INTR) {
-                    JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                                    "operation interrupted");
                 }
                 if (packetBufferLen > MAX_BUFFER_LEN) {
                     free(fullPacket);
@@ -1075,12 +1050,9 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_peekData(JNIEnv *env, jobject thi
                 if (ret == 0) {
                     JNU_ThrowByName(env,JNU_JAVANETPKG "SocketTimeoutException",
                                     "Receive timed out");
-                } else if (ret == JVM_IO_ERR) {
+                } else if (ret == -1) {
                     JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException",
                                     "Socket closed");
-                } else if (ret == JVM_IO_INTR) {
-                    JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                                    "operation interrupted");
                 }
                 if (packetBufferLen > MAX_BUFFER_LEN) {
                     free(fullPacket);
@@ -1093,7 +1065,7 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_peekData(JNIEnv *env, jobject thi
         n = recvfrom(fduse, fullPacket, packetBufferLen, MSG_PEEK,
                          (struct sockaddr *)&remote_addr, &remote_addrsize);
         port = (int) ntohs ((u_short) GET_PORT((SOCKETADDRESS *)&remote_addr));
-        if (n == JVM_IO_ERR) {
+        if (n == SOCKET_ERROR) {
             if (WSAGetLastError() == WSAECONNRESET) {
                 jboolean connected;
 
@@ -1272,12 +1244,9 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_receive0(JNIEnv *env, jobject thi
                 if (ret == 0) {
                     JNU_ThrowByName(env, JNU_JAVANETPKG "SocketTimeoutException",
                                     "Receive timed out");
-                } else if (ret == JVM_IO_ERR) {
+                } else if (ret == -1) {
                     JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException",
                                     "Socket closed");
-                } else if (ret == JVM_IO_INTR) {
-                    JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                                    "operation interrupted");
                 }
                 return;
             }
@@ -1352,12 +1321,9 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_receive0(JNIEnv *env, jobject thi
             if (ret == 0) {
                 JNU_ThrowByName(env, JNU_JAVANETPKG "SocketTimeoutException",
                                 "Receive timed out");
-            } else if (ret == JVM_IO_ERR) {
+            } else if (ret == -1) {
                 JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException",
                                 "Socket closed");
-            } else if (ret == JVM_IO_INTR) {
-                JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                                "operation interrupted");
             }
             if (packetBufferLen > MAX_BUFFER_LEN) {
                 free(fullPacket);
@@ -1376,7 +1342,7 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_receive0(JNIEnv *env, jobject thi
         n = recvfrom(fduse, fullPacket, packetBufferLen, 0,
                          (struct sockaddr *)&remote_addr, &remote_addrsize);
 
-        if (n == JVM_IO_ERR) {
+        if (n == SOCKET_ERROR) {
             if (WSAGetLastError() == WSAECONNRESET) {
                 /*
                  * An icmp port unreachable has been received - consume any other
@@ -1420,12 +1386,9 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_receive0(JNIEnv *env, jobject thi
                         if (ret == 0) {
                             JNU_ThrowByName(env, JNU_JAVANETPKG "SocketTimeoutException",
                                             "Receive timed out");
-                        } else if (ret == JVM_IO_ERR) {
+                        } else if (ret == -1) {
                             JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException",
                                             "Socket closed");
-                        } else if (ret == JVM_IO_INTR) {
-                            JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                                            "operation interrupted");
                         }
                         if (packetBufferLen > MAX_BUFFER_LEN) {
                             free(fullPacket);
@@ -1528,7 +1491,7 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_datagramSocketCreate(JNIEnv *env,
     } else {
         fd =  (int) socket (AF_INET, SOCK_DGRAM, 0);
     }
-    if (fd == JVM_IO_ERR) {
+    if (fd == SOCKET_ERROR) {
         NET_ThrowCurrent(env, "Socket creation failed");
         return;
     }
@@ -1546,7 +1509,7 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_datagramSocketCreate(JNIEnv *env,
         WSAIoctl(fd,SIO_UDP_CONNRESET,&t,sizeof(t),&x1,sizeof(x1),&x2,0,0);
         t = TRUE;
         fd1 = socket (AF_INET6, SOCK_DGRAM, 0);
-        if (fd1 == JVM_IO_ERR) {
+        if (fd1 == SOCKET_ERROR) {
             NET_ThrowCurrent(env, "Socket creation failed");
             return;
         }
@@ -1650,7 +1613,7 @@ static int getInet4AddrFromIf (JNIEnv *env, jobject nif, struct in_addr *iaddr)
 {
     jobject addr;
 
-    int ret = getInetAddrFromIf (env, IPv4, nif, &addr);
+    int ret = getInetAddrFromIf(env, java_net_InetAddress_IPv4, nif, &addr);
     if (ret == -1) {
         return -1;
     }
@@ -1676,6 +1639,7 @@ static int getIndexFromIf (JNIEnv *env, jobject nif) {
 }
 
 static int isAdapterIpv6Enabled(JNIEnv *env, int index) {
+  extern int getAllInterfacesAndAddresses (JNIEnv *env, netif **netifPP);
   netif *ifList, *curr;
   int ipv6Enabled = 0;
   if (getAllInterfacesAndAddresses (env, &ifList) < 0) {
@@ -2327,9 +2291,9 @@ Java_java_net_TwoStacksPlainDatagramSocketImpl_socketLocalAddress(JNIEnv *env, j
     len = sizeof (struct sockaddr_in);
 
     /* family==-1 when socket is not connected */
-    if ((family == IPv6) || (family == -1 && fd == -1)) {
+    if ((family == java_net_InetAddress_IPv6) || (family == -1 && fd == -1)) {
         fd = fd1; /* must be IPv6 only */
-        len = sizeof (struct SOCKADDR_IN6);
+        len = sizeof(struct sockaddr_in6);
     }
 
     if (fd == -1) {

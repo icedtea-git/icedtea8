@@ -85,6 +85,10 @@ CXXFLAGS =           \
   ${HS_LIB_ARCH}     \
   ${VM_DISTRO}
 
+ifdef DERIVATIVE_ID
+CXXFLAGS += -DDERIVATIVE_ID="\"$(DERIVATIVE_ID)\""
+endif
+
 # This is VERY important! The version define must only be supplied to vm_version.o
 # If not, ccache will not re-use the cache at all, since the version string might contain
 # a time and date.
@@ -100,6 +104,10 @@ CXXFLAGS += $(CXXFLAGS/BYFILE)
 ifneq ($(LP64), 1)
 CXXFLAGS/ostream.o += -D_FILE_OFFSET_BITS=64
 endif # ifneq ($(LP64), 1)
+
+ifdef DISTRIBUTION_ID
+CXXFLAGS += -DDISTRIBUTION_ID="\"$(DISTRIBUTION_ID)\""
+endif
 
 # CFLAGS_WARN holds compiler options to suppress/enable warnings.
 CFLAGS += $(CFLAGS_WARN)
@@ -299,8 +307,10 @@ ifeq ($(filter -sbfast -xsbfast, $(CFLAGS_BROWSE)),)
 	$(QUIETLY) $(LINK_LIB.CXX/POST_HOOK)
 	$(QUIETLY) rm -f $@.1 && ln -s $@ $@.1
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
 	$(QUIETLY) $(OBJCOPY) --only-keep-debug $@ $(LIBJVM_DEBUGINFO)
 	$(QUIETLY) $(OBJCOPY) --add-gnu-debuglink=$(LIBJVM_DEBUGINFO) $@
+  endif
   ifeq ($(STRIP_POLICY),all_strip)
 	$(QUIETLY) $(STRIP) $@
   else
@@ -309,9 +319,11 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
     # implied else here is no stripping at all
     endif
   endif
+  ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
 	$(ZIPEXE) -q -y $(LIBJVM_DIZ) $(LIBJVM_DEBUGINFO)
 	$(RM) $(LIBJVM_DEBUGINFO)
+  endif
   endif
 endif
 endif # filter -sbfast -xsbfast

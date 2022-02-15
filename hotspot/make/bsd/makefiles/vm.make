@@ -341,6 +341,7 @@ $(LIBJVM): $(LIBJVM.o) $(LIBJVM_MAPFILE) $(LD_SCRIPT)
 	}
 
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(OS_VENDOR), Darwin)
 	$(DSYMUTIL) $@
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
@@ -363,6 +364,7 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
 	$(RM) $(LIBJVM_DEBUGINFO)
     endif
   endif
+endif
 endif
 
 DEST_SUBDIR        = $(JDK_LIBDIR)/$(VM_SUBDIR)

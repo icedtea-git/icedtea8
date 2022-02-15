@@ -117,9 +117,6 @@ static void (*fp_gdk_draw_rectangle)(GdkDrawable*, GdkGC*, gboolean,
         gint, gint, gint, gint);
 static GdkPixbuf *(*fp_gdk_pixbuf_new)(GdkColorspace colorspace,
         gboolean has_alpha, int bits_per_sample, int width, int height);
-static GdkPixbuf *(*fp_gdk_pixbuf_get_from_drawable)(GdkPixbuf *dest,
-        GdkDrawable *src, GdkColormap *cmap, int src_x, int src_y,
-        int dest_x, int dest_y, int width, int height);
 static void (*fp_gdk_drawable_get_size)(GdkDrawable *drawable,
         gint* width, gint* height);
 
@@ -318,7 +315,7 @@ gboolean gtk2_check(const char* lib_name, gboolean load)
         return TRUE;
     } else {
         void *lib = NULL;
-        #ifdef RTLD_NOLOAD
+#ifdef RTLD_NOLOAD
         /* Just check if gtk libs are already in the process space */
         lib = dlopen(lib_name, RTLD_LAZY | RTLD_NOLOAD);
         if (!load || lib != NULL) {
@@ -341,7 +338,7 @@ gboolean gtk2_check(const char* lib_name, gboolean load)
         fp_gtk_check_version = dlsym(lib, "gtk_check_version");
         /* Check for GTK 2.2+ */
         if (!fp_gtk_check_version(2, 2, 0)) {
-            return  TRUE;
+            return TRUE;
         }
 
         // 8048289: workaround for https://bugzilla.gnome.org/show_bug.cgi?id=733065
@@ -554,9 +551,13 @@ GtkApi* gtk2_load(JNIEnv *env, const char* lib_name)
         fp_g_object_set = dl_symbol("g_object_set");
 
         /* GDK */
+        fp_gdk_get_default_root_window =
+            dl_symbol("gdk_get_default_root_window");
         fp_gdk_pixmap_new = dl_symbol("gdk_pixmap_new");
         fp_gdk_pixbuf_get_from_drawable =
             dl_symbol("gdk_pixbuf_get_from_drawable");
+        fp_gdk_pixbuf_scale_simple =
+            dl_symbol("gdk_pixbuf_scale_simple");
         fp_gdk_gc_new = dl_symbol("gdk_gc_new");
         fp_gdk_rgb_gc_set_foreground =
             dl_symbol("gdk_rgb_gc_set_foreground");
@@ -578,6 +579,8 @@ GtkApi* gtk2_load(JNIEnv *env, const char* lib_name)
                 dl_symbol("gdk_pixbuf_get_bits_per_sample");
         fp_gdk_pixbuf_get_n_channels =
                 dl_symbol("gdk_pixbuf_get_n_channels");
+        fp_gdk_pixbuf_get_colorspace =
+                dl_symbol("gdk_pixbuf_get_colorspace");
 
         /* GTK painting */
         fp_gtk_init_check = dl_symbol("gtk_init_check");
@@ -2481,6 +2484,8 @@ static jobject gtk2_get_setting(JNIEnv *env, Setting property)
             return get_boolean_property(env, settings, "gtk-cursor-blink");
         case GTK_CURSOR_BLINK_TIME:
             return get_integer_property(env, settings, "gtk-cursor-blink-time");
+        case GTK_BUTTON_ORDER:
+	    return get_boolean_property(env, settings, "gtk-alternative-button-order");
     }
 
     return NULL;

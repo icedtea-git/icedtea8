@@ -781,7 +781,7 @@ final class XWM
             } else if (isSawfish()) {
                 awt_wmgr = XWM.SAWFISH_WM;
             } else if (isKDE2()) {
-                awt_wmgr =XWM.KDE2_WM;
+                awt_wmgr = XWM.KDE2_WM;
             } else if (isCompiz()) {
                 awt_wmgr = XWM.COMPIZ_WM;
             } else if (isLookingGlass()) {
@@ -1024,8 +1024,12 @@ final class XWM
             shellBounds.translate(-window.currentInsets.left, -window.currentInsets.top);
             window.updateSizeHints(window.getDimensions());
             requestWMExtents(window.getWindow());
-            XlibWrapper.XMoveResizeWindow(XToolkit.getDisplay(), window.getShell(),
-                                          shellBounds.x, shellBounds.y, shellBounds.width, shellBounds.height);
+            XlibWrapper.XMoveResizeWindow(XToolkit.getDisplay(),
+                                          window.getShell(),
+                                          window.scaleUp(shellBounds.x),
+                                          window.scaleUp(shellBounds.y),
+                                          window.scaleUp(shellBounds.width),
+                                          window.scaleUp(shellBounds.height));
             /* REMINDER: will need to revisit when setExtendedStateBounds is added */
             //Fix for 4320050: Minimum size for java.awt.Frame is not being enforced.
             //We need to update frame's minimum size, not to reset it
@@ -1058,8 +1062,12 @@ final class XWM
                 window.updateSizeHints(newDimensions);
                 requestWMExtents(window.getWindow());
                 XToolkit.XSync();
-                XlibWrapper.XMoveResizeWindow(XToolkit.getDisplay(), window.getShell(),
-                                              shellBounds.x, shellBounds.y, shellBounds.width, shellBounds.height);
+                XlibWrapper.XMoveResizeWindow(XToolkit.getDisplay(),
+                                              window.getShell(),
+                                              window.scaleUp(shellBounds.x),
+                                              window.scaleUp(shellBounds.y),
+                                              window.scaleUp(shellBounds.width),
+                                              window.scaleUp(shellBounds.height));
             }
             if (!justChangeSize) {  /* update decorations */
                 setShellDecor(window);
@@ -1698,6 +1706,12 @@ final class XWM
                 pattr.dispose();
             }
         }
+
+        correctWM.top = win.scaleUp(correctWM.top);
+        correctWM.bottom = win.scaleUp(correctWM.bottom);
+        correctWM.left = win.scaleUp(correctWM.left);
+        correctWM.right = win.scaleUp(correctWM.right);
+
         if (storedInsets.get(win.getClass()) == null) {
             storedInsets.put(win.getClass(), correctWM);
         }

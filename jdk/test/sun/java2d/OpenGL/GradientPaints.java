@@ -23,6 +23,7 @@
 
 /*
  * @test
+ * @key headful
  * @bug 6521533 6525997
  * @summary Verifies that the OGL-accelerated codepaths for GradientPaint,
  * LinearGradientPaint, and RadialGradientPaint produce results that are

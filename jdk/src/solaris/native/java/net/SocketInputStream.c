@@ -22,21 +22,15 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
-#include <stdlib.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 
-#include "jvm.h"
-#include "jni_util.h"
 #include "net_util.h"
 
 #include "java_net_SocketInputStream.h"
 
-
-/************************************************************************
+/*
  * SocketInputStream
  */
 
@@ -142,7 +136,7 @@ Java_java_net_SocketInputStream_socketRead0(JNIEnv *env, jobject this,
             if (nread == 0) {
                 JNU_ThrowByName(env, JNU_JAVANETPKG "SocketTimeoutException",
                             "Read timed out");
-            } else if (nread == JVM_IO_ERR) {
+            } else if (nread == -1) {
                 if (errno == EBADF) {
                      JNU_ThrowByName(env, JNU_JAVANETPKG "SocketException", "Socket closed");
                  } else if (errno == ENOMEM) {
@@ -151,9 +145,6 @@ Java_java_net_SocketInputStream_socketRead0(JNIEnv *env, jobject this,
                      NET_ThrowByNameWithLastError(env, JNU_JAVANETPKG "SocketException",
                                                   "select/poll failed");
                  }
-            } else if (nread == JVM_IO_INTR) {
-                JNU_ThrowByName(env, JNU_JAVAIOPKG "InterruptedIOException",
-                            "Operation interrupted");
             }
             if (bufP != BUF) {
                 free(bufP);

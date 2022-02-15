@@ -38,7 +38,7 @@ default:: $(BUILD_PCH_FILE) $(AOUT) checkAndBuildSA
 !include ../local.make
 !include compile.make
 
-CXX_FLAGS=$(CXX_FLAGS) $(FASTDEBUG_OPT_OPTION)
+CXX_FLAGS=$(CXX_FLAGS) $(FASTDEBUG_OPT_OPTION) /D "CHECK_UNHANDLED_OOPS"
 
 !include $(WorkSpace)/make/windows/makefiles/vm.make
 !include local.make
@@ -59,9 +59,11 @@ $(AOUT): $(Res_Files) $(Obj_Files) vm.def
 	$(MT) /manifest $@.manifest /outputresource:$@;#2
 !endif
 !if "$(ENABLE_FULL_DEBUG_SYMBOLS)" == "1"
+!if "$(STRIP_POLICY)" != "no_strip"
 !if "$(ZIP_DEBUGINFO_FILES)" == "1"
 	$(ZIPEXE) -q $*.diz $*.map $*.pdb
 	$(RM) $*.map $*.pdb
+!endif
 !endif
 !endif
 

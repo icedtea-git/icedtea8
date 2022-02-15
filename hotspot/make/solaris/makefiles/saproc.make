@@ -121,8 +121,10 @@ $(SADISOBJ): $(SADISSRCFILES)
 	           -c -o $(SADISOBJ)
 	
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
 	$(QUIETLY) $(OBJCOPY) --only-keep-debug $@ $(LIBSAPROC_DEBUGINFO)
 	$(QUIETLY) $(OBJCOPY) --add-gnu-debuglink=$(LIBSAPROC_DEBUGINFO) $@
+  endif
   ifeq ($(STRIP_POLICY),all_strip)
 	$(QUIETLY) $(STRIP) $@
   else
@@ -132,8 +134,10 @@ ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
     endif
   endif
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
+    ifneq ($(STRIP_POLICY),no_strip)
 	$(ZIPEXE) -q -y $(LIBSAPROC_DIZ) $(LIBSAPROC_DEBUGINFO)
 	$(RM) $(LIBSAPROC_DEBUGINFO)
+    endif
   endif
 endif
 

@@ -226,11 +226,13 @@ EXPORT_LIST += $(EXPORT_DOCS_DIR)/platform/jvmti/jvmti.html
 # client and server subdirectories have symbolic links to ../libjsig.$(LIBRARY_SUFFIX)
 EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.$(LIBRARY_SUFFIX)
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
     EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.diz
   else
     EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libjsig.debuginfo
   endif
+endif
 endif
 
 EXPORT_SERVER_DIR = $(EXPORT_JRE_LIB_ARCH_DIR)/server
@@ -246,6 +248,7 @@ ifeq ($(JVM_VARIANT_SERVER),true)
     EXPORT_LIST += $(EXPORT_SERVER_DIR)/64/libjvm_dtrace.$(LIBRARY_SUFFIX)
   endif
   ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
       EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm.diz
       EXPORT_LIST += $(EXPORT_SERVER_DIR)/libjvm_db.diz
@@ -264,6 +267,7 @@ ifeq ($(JVM_VARIANT_SERVER),true)
       endif
     endif
   endif
+  endif
 endif
 ifeq ($(JVM_VARIANT_CLIENT),true)
   EXPORT_LIST += $(EXPORT_CLIENT_DIR)/Xusage.txt
@@ -275,6 +279,7 @@ ifeq ($(JVM_VARIANT_CLIENT),true)
     EXPORT_LIST += $(EXPORT_CLIENT_DIR)/64/libjvm_dtrace.$(LIBRARY_SUFFIX)
   endif
   ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+  ifneq ($(STRIP_POLICY),no_strip)
     ifeq ($(ZIP_DEBUGINFO_FILES),1)
       EXPORT_LIST += $(EXPORT_CLIENT_DIR)/libjvm.diz
       EXPORT_LIST += $(EXPORT_CLIENT_DIR)/libjvm_db.diz
@@ -293,10 +298,12 @@ ifeq ($(JVM_VARIANT_CLIENT),true)
       endif
     endif
   endif
+  endif
 endif
 
 EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.$(LIBRARY_SUFFIX)
 ifeq ($(ENABLE_FULL_DEBUG_SYMBOLS),1)
+ifneq ($(STRIP_POLICY),no_strip)
   ifeq ($(ZIP_DEBUGINFO_FILES),1)
     EXPORT_LIST += $(EXPORT_JRE_LIB_ARCH_DIR)/libsaproc.diz
   else

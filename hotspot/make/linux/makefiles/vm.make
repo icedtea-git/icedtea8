@@ -99,6 +99,14 @@ CXXFLAGS =           \
   ${HS_LIB_ARCH}     \
   ${VM_DISTRO}
 
+ifdef DERIVATIVE_ID
+CXXFLAGS += -DDERIVATIVE_ID="\"$(DERIVATIVE_ID)\""
+endif
+
+ifdef DISTRIBUTION_ID
+CXXFLAGS += -DDISTRIBUTION_ID="\"$(DISTRIBUTION_ID)\""
+endif
+
 # This is VERY important! The version define must only be supplied to vm_version.o
 # If not, ccache will not re-use the cache at all, since the version string might contain
 # a time and date.
@@ -221,7 +229,7 @@ endif
 # Locate all source files in the given directory, excluding files in Src_Files_EXCLUDE.
 define findsrc
 	$(notdir $(shell find $(1)/. ! -name . -prune \
-		-a \( -name \*.c -o -name \*.cpp -o -name \*.s \) \
+		-a \( -name \*.c -o -name \*.cpp -o -name \*.s -o -name \*.S \) \
 		-a ! \( -name DUMMY $(addprefix -o -name ,$(Src_Files_EXCLUDE)) \)))
 endef
 

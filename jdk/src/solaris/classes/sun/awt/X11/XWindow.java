@@ -536,10 +536,11 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
         if (isEventDisabled(xev)) {
             return;
         }
-        int x = xe.get_x();
-        int y = xe.get_y();
-        int w = xe.get_width();
-        int h = xe.get_height();
+
+        int x = scaleDown(xe.get_x());
+        int y = scaleDown(xe.get_y());
+        int w = scaleDown(xe.get_width());
+        int h = scaleDown(xe.get_height());
 
         Component target = (Component)getEventSource();
         AWTAccessor.ComponentAccessor compAccessor = AWTAccessor.getComponentAccessor();
@@ -656,10 +657,11 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
         when = xbe.get_time();
         long jWhen = XToolkit.nowMillisUTC_offset(when);
 
-        int x = xbe.get_x();
-        int y = xbe.get_y();
+        int x = scaleDown(xbe.get_x());
+        int y = scaleDown(xbe.get_y());
         if (xev.get_xany().get_window() != window) {
-            Point localXY = toLocal(xbe.get_x_root(), xbe.get_y_root());
+            Point localXY = toLocal(scaleDown(xbe.get_x_root()),
+                                    scaleDown(xbe.get_y_root()));
             x = localXY.x;
             y = localXY.y;
         }
@@ -710,8 +712,8 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
             MouseEvent me = new MouseEvent((Component)getEventSource(),
                                            type == XConstants.ButtonPress ? MouseEvent.MOUSE_PRESSED : MouseEvent.MOUSE_RELEASED,
                                            jWhen,modifiers, x, y,
-                                           xbe.get_x_root(),
-                                           xbe.get_y_root(),
+                                           scaleDown(xbe.get_x_root()),
+                                           scaleDown(xbe.get_y_root()),
                                            clickCount,popupTrigger,button);
 
             postEventToEventQueue(me);
@@ -724,8 +726,8 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
                                                      jWhen,
                                                      modifiers,
                                                      x, y,
-                                                     xbe.get_x_root(),
-                                                     xbe.get_y_root(),
+                                                     scaleDown(xbe.get_x_root()),
+                                                     scaleDown(xbe.get_y_root()),
                                                      clickCount,
                                                      false, button));
             }
@@ -736,8 +738,8 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
                 MouseWheelEvent mwe = new MouseWheelEvent((Component)getEventSource(),MouseEvent.MOUSE_WHEEL, jWhen,
                                                           modifiers,
                                                           x, y,
-                                                          xbe.get_x_root(),
-                                                          xbe.get_y_root(),
+                                                          scaleDown(xbe.get_x_root()),
+                                                          scaleDown(xbe.get_y_root()),
                                                           1,false,MouseWheelEvent.WHEEL_UNIT_SCROLL,
                                                           3,button==4 ?  -1 : 1);
                 postEventToEventQueue(mwe);
@@ -784,8 +786,8 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
         /*
            Fix for 6176814 .  Add multiclick checking.
         */
-        int x = xme.get_x();
-        int y = xme.get_y();
+        int x = scaleDown(xme.get_x());
+        int y = scaleDown(xme.get_y());
         XWindow lastWindow = (lastWindowRef != null) ? ((XWindow)lastWindowRef.get()):(null);
 
         if (!(lastWindow == this &&
@@ -807,7 +809,8 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
         Component source = (Component)getEventSource();
 
         if (xme.get_window() != window) {
-            Point localXY = toLocal(xme.get_x_root(), xme.get_y_root());
+            Point localXY = toLocal(scaleDown(xme.get_x_root()),
+                                    scaleDown(xme.get_y_root()));
             x = localXY.x;
             y = localXY.y;
         }
@@ -816,7 +819,9 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
          */
         if ((isDragging && clickCount == 0) || !isDragging) {
             MouseEvent mme = new MouseEvent(source, mouseEventType, jWhen,
-                                            modifiers, x, y, xme.get_x_root(), xme.get_y_root(),
+                                            modifiers, x, y,
+                                            scaleDown(xme.get_x_root()),
+                                            scaleDown(xme.get_y_root()),
                                             clickCount, popupTrigger, MouseEvent.NOBUTTON);
             postEventToEventQueue(mme);
         }
@@ -928,10 +933,11 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
         int modifiers = getModifiers(xce.get_state(),0,0);
         int clickCount = 0;
         boolean popupTrigger = false;
-        int x = xce.get_x();
-        int y = xce.get_y();
+        int x = scaleDown(xce.get_x());
+        int y = scaleDown(xce.get_y());
         if (xce.get_window() != window) {
-            Point localXY = toLocal(xce.get_x_root(), xce.get_y_root());
+            Point localXY = toLocal(scaleDown(xce.get_x_root()),
+                                    scaleDown(xce.get_y_root()));
             x = localXY.x;
             y = localXY.y;
         }
@@ -939,18 +945,27 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
         // This code tracks boundary crossing and ensures MOUSE_ENTER/EXIT
         // are posted in alternate pairs
         if (compWithMouse != null) {
-            MouseEvent me = new MouseEvent(compWithMouse,
-                MouseEvent.MOUSE_EXITED, jWhen, modifiers, xce.get_x(),
-                xce.get_y(), xce.get_x_root(), xce.get_y_root(), clickCount, popupTrigger,
-                MouseEvent.NOBUTTON);
+            MouseEvent me = new MouseEvent(compWithMouse, MouseEvent.MOUSE_EXITED,
+                                           jWhen, modifiers,
+                                           scaleDown(xce.get_x()),
+                                           scaleDown(xce.get_y()),
+                                           scaleDown(xce.get_x_root()),
+                                           scaleDown(xce.get_y_root()),
+                                           clickCount, popupTrigger,
+                                           MouseEvent.NOBUTTON);
             postEventToEventQueue(me);
             eventLog.finest("Clearing last window ref");
             lastWindowRef = null;
         }
         if (xce.get_type() == XConstants.EnterNotify) {
             MouseEvent me = new MouseEvent(getEventSource(), MouseEvent.MOUSE_ENTERED,
-                jWhen, modifiers, xce.get_x(), xce.get_y(), xce.get_x_root(), xce.get_y_root(), clickCount,
-                popupTrigger, MouseEvent.NOBUTTON);
+                                           jWhen, modifiers,
+                                           scaleDown(xce.get_x()),
+                                           scaleDown(xce.get_y()),
+                                           scaleDown(xce.get_x_root()),
+                                           scaleDown(xce.get_y_root()),
+                                           clickCount, popupTrigger,
+                                           MouseEvent.NOBUTTON);
             postEventToEventQueue(me);
         }
     }
@@ -1507,4 +1522,18 @@ class XWindow extends XBaseWindow implements X11ComponentPeer {
         }
     }
 
+    @Override
+    protected int getScale() {
+        return graphicsConfig.getScale();
+    }
+
+    @Override
+    protected int scaleUp(int x) {
+        return graphicsConfig.scaleUp(x);
+    }
+
+    @Override
+    protected int scaleDown(int x) {
+        return graphicsConfig.scaleDown(x);
+    }
 }

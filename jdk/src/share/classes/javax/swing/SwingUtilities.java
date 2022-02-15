@@ -1757,8 +1757,7 @@ public class SwingUtilities implements SwingConstants
 
 
     // Don't use String, as it's not guaranteed to be unique in a Hashtable.
-    private static final Object sharedOwnerFrameKey =
-       new StringBuffer("SwingUtilities.sharedOwnerFrame");
+    private static final Object sharedOwnerFrameKey = new Object(); // SwingUtilities.sharedOwnerFrame
 
     static class SharedOwnerFrame extends Frame implements WindowListener {
         public void addNotify() {

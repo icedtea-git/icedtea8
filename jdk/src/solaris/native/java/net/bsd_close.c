@@ -380,9 +380,8 @@ int NET_ReadV(int s, const struct iovec * vector, int count) {
 }
 
 int NET_RecvFrom(int s, void *buf, int len, unsigned int flags,
-       struct sockaddr *from, int *fromlen) {
-    /* casting int *fromlen -> socklen_t* Both are ints */
-    BLOCKING_IO_RETURN_INT( s, recvfrom(s, buf, len, flags, from, (socklen_t *)fromlen) );
+       struct sockaddr *from, socklen_t *fromlen) {
+    BLOCKING_IO_RETURN_INT( s, recvfrom(s, buf, len, flags, from, fromlen) );
 }
 
 int NET_Send(int s, void *msg, int len, unsigned int flags) {
@@ -398,29 +397,17 @@ int NET_SendTo(int s, const void *msg, int len,  unsigned  int
     BLOCKING_IO_RETURN_INT( s, sendto(s, msg, len, flags, to, tolen) );
 }
 
-int NET_Accept(int s, struct sockaddr *addr, int *addrlen) {
-    socklen_t len = *addrlen;
-    int error = accept(s, addr, &len);
-    if (error != -1)
-        *addrlen = (int)len;
-    BLOCKING_IO_RETURN_INT( s, error );
+int NET_Accept(int s, struct sockaddr *addr, socklen_t *addrlen) {
+    BLOCKING_IO_RETURN_INT( s, accept(s, addr, addrlen) );
 }
 
 int NET_Connect(int s, struct sockaddr *addr, int addrlen) {
     BLOCKING_IO_RETURN_INT( s, connect(s, addr, addrlen) );
 }
 
-#ifndef USE_SELECT
 int NET_Poll(struct pollfd *ufds, unsigned int nfds, int timeout) {
     BLOCKING_IO_RETURN_INT( ufds[0].fd, poll(ufds, nfds, timeout) );
 }
-#else
-int NET_Select(int s, fd_set *readfds, fd_set *writefds,
-               fd_set *exceptfds, struct timeval *timeout) {
-    BLOCKING_IO_RETURN_INT( s-1,
-                            select(s, readfds, writefds, exceptfds, timeout) );
-}
-#endif
 
 /*
  * Wrapper for select(s, timeout). We are using select() on Mac OS due to Bug 7131399.

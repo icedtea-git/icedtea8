@@ -22,27 +22,17 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
+#include <ctype.h>
 #include <errno.h>
-#include <sys/time.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in_systm.h>
 #include <netinet/in.h>
+#include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
-#include <netdb.h>
-#include <string.h>
 #include <stdlib.h>
-#include <ctype.h>
+#include <string.h>
+#include <sys/time.h>
 
-#ifdef _ALLBSD_SOURCE
-#include <unistd.h>
-#include <sys/param.h>
-#endif
-
-#include "jvm.h"
-#include "jni_util.h"
 #include "net_util.h"
 
 #include "java_net_Inet4AddressImpl.h"
@@ -70,7 +60,7 @@ Java_java_net_Inet4AddressImpl_getLocalHostName(JNIEnv *env, jobject this) {
     char hostname[NI_MAXHOST + 1];
 
     hostname[0] = '\0';
-    if (JVM_GetHostName(hostname, NI_MAXHOST)) {
+    if (gethostname(hostname, NI_MAXHOST)) {
         strcpy(hostname, "localhost");
 #if defined(__solaris__)
     } else {
@@ -162,7 +152,7 @@ Java_java_net_Inet4AddressImpl_lookupAllHostAddr(JNIEnv *env, jobject this,
 
     if (getaddrinfo_error) {
         /* report error */
-        ThrowUnknownHostExceptionWithGaiError(
+        NET_ThrowUnknownHostExceptionWithGaiError(
             env, hostname, getaddrinfo_error);
         JNU_ReleaseStringPlatformChars(env, host, hostname);
         return NULL;
@@ -294,13 +284,12 @@ Java_java_net_Inet4AddressImpl_getHostByAddr(JNIEnv *env, jobject this,
     addr |= ((caddr[2] <<8) & 0xff00);
     addr |= (caddr[3] & 0xff);
     memset((char *) &him4, 0, sizeof(him4));
-    him4.sin_addr.s_addr = (uint32_t) htonl(addr);
+    him4.sin_addr.s_addr = htonl(addr);
     him4.sin_family = AF_INET;
     sa = (struct sockaddr *) &him4;
     len = sizeof(him4);
 
-    error = getnameinfo(sa, len, host, NI_MAXHOST, NULL, 0,
-                               NI_NAMEREQD);
+    error = getnameinfo(sa, len, host, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 
     if (!error) {
         ret = (*env)->NewStringUTF(env, host);
@@ -335,7 +324,7 @@ Java_java_net_Inet4AddressImpl_getLocalHostName(JNIEnv *env, jobject this) {
     char hostname[NI_MAXHOST+1];
 
     hostname[0] = '\0';
-    if (JVM_GetHostName(hostname, sizeof(hostname))) {
+    if (gethostname(hostname, NI_MAXHOST)) {
         /* Something went wrong, maybe networking is not setup? */
         strcpy(hostname, "localhost");
     } else {
@@ -419,7 +408,7 @@ Java_java_net_Inet4AddressImpl_lookupAllHostAddr(JNIEnv *env, jobject this,
 
     if (error) {
         /* report error */
-        ThrowUnknownHostExceptionWithGaiError(env, hostname, error);
+        NET_ThrowUnknownHostExceptionWithGaiError(env, hostname, error);
         JNU_ReleaseStringPlatformChars(env, host, hostname);
         return NULL;
     } else {
@@ -444,7 +433,7 @@ Java_java_net_Inet4AddressImpl_lookupAllHostAddr(JNIEnv *env, jobject this,
 
             if (!skip) {
                 struct addrinfo *next
-                    = (struct addrinfo*) malloc(sizeof(struct addrinfo));
+                    = (struct addrinfo *)malloc(sizeof(struct addrinfo));
                 if (!next) {
                     JNU_ThrowOutOfMemoryError(env, "Native heap allocation failed");
                     ret = NULL;
@@ -533,13 +522,12 @@ Java_java_net_Inet4AddressImpl_getHostByAddr(JNIEnv *env, jobject this,
     addr |= ((caddr[2] <<8) & 0xff00);
     addr |= (caddr[3] & 0xff);
     memset((void *) &him4, 0, sizeof(him4));
-    him4.sin_addr.s_addr = (uint32_t) htonl(addr);
+    him4.sin_addr.s_addr = htonl(addr);
     him4.sin_family = AF_INET;
     sa = (struct sockaddr *) &him4;
     len = sizeof(him4);
 
-    error = getnameinfo(sa, len, host, NI_MAXHOST, NULL, 0,
-                        NI_NAMEREQD);
+    error = getnameinfo(sa, len, host, NI_MAXHOST, NULL, 0, NI_NAMEREQD);
 
     if (!error) {
         ret = (*env)->NewStringUTF(env, host);
@@ -736,7 +724,7 @@ Java_java_net_Inet4AddressImpl_isReachable0(JNIEnv *env, jobject this,
      * Let's try to create a RAW socket to send ICMP packets
      * This usually requires "root" privileges, so it's likely to fail.
      */
-    fd = JVM_Socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+    fd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (fd != -1) {
       /*
        * It didn't fail, so we can use ICMP_ECHO requests.
@@ -747,8 +735,8 @@ Java_java_net_Inet4AddressImpl_isReachable0(JNIEnv *env, jobject this,
     /*
      * Can't create a raw socket, so let's try a TCP socket
      */
-    fd = JVM_Socket(AF_INET, SOCK_STREAM, 0);
-    if (fd == JVM_IO_ERR) {
+    fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd == -1) {
         /* note: if you run out of fds, you may not be able to load
          * the exception class, and get a NoClassDefFoundError
          * instead.
@@ -776,9 +764,8 @@ Java_java_net_Inet4AddressImpl_isReachable0(JNIEnv *env, jobject this,
      */
     SET_NONBLOCKING(fd);
 
-    /* no need to use NET_Connect as non-blocking */
     him.sin_port = htons(7);    /* Echo */
-    connect_rv = JVM_Connect(fd, (struct sockaddr *)&him, len);
+    connect_rv = NET_Connect(fd, (struct sockaddr *)&him, len);
 
     /**
      * connection established or refused immediately, either way it means
@@ -788,7 +775,7 @@ Java_java_net_Inet4AddressImpl_isReachable0(JNIEnv *env, jobject this,
         close(fd);
         return JNI_TRUE;
     } else {
-        int optlen;
+        socklen_t optlen = (socklen_t)sizeof(connect_rv);
 
         switch (errno) {
         case ENETUNREACH: /* Network Unreachable */
@@ -818,9 +805,8 @@ Java_java_net_Inet4AddressImpl_isReachable0(JNIEnv *env, jobject this,
         timeout = NET_Wait(env, fd, NET_WAIT_CONNECT, timeout);
         if (timeout >= 0) {
           /* has connection been established? */
-          optlen = sizeof(connect_rv);
-          if (JVM_GetSockOpt(fd, SOL_SOCKET, SO_ERROR, (void*)&connect_rv,
-                             &optlen) <0) {
+          if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (void*)&connect_rv,
+                         &optlen) <0) {
             connect_rv = errno;
           }
           if (connect_rv == 0 || connect_rv == ECONNREFUSED) {

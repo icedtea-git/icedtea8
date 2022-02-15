@@ -617,7 +617,7 @@ ifeq ($(findstring $(OPENJDK_TARGET_OS),windows macosx),)
         XRSurfaceData.c \
         XRBackendNative.c
 
-    LIBAWT_XAWT_LDFLAGS_SUFFIX := $(LIBM) -lawt -lXext -lX11 -lXrender $(LIBDL) -lXtst -lXi -ljava -ljvm -lc
+    LIBAWT_XAWT_LDFLAGS_SUFFIX := $(LIBM) -lawt -lXext -lX11 -lXrender -lXcomposite $(LIBDL) -lXtst -lXi -ljava -ljvm -lc
 
     ifeq ($(OPENJDK_TARGET_OS), linux)
       # To match old build, add this to LDFLAGS instead of suffix.
@@ -658,25 +658,42 @@ endif
 
 ##########################################################################################
 
+LIBJAVALCMS_DIR := $(JDK_TOPDIR)/src/share/native/sun/java2d/cmm/lcms
+
+ifeq ($(USE_EXTERNAL_LCMS), true)
+  # If we're using an external library, we'll just need the wrapper part.
+  # By including it explicitely, all other files will be excluded.
+  BUILD_LIBJAVALCMS_INCLUDE_FILES := LCMS.c
+  BUILD_LIBJAVALCMS_HEADERS :=
+else
+  BUILD_LIBJAVALCMS_INCLUDE_FILES :=
+  # If we're using the bundled library, we'll need to include it in the
+  # include path explicitly. Otherwise the system headers will be used.
+  BUILD_LIBJAVALCMS_HEADERS := -I$(LIBJAVALCMS_DIR)
+endif
+
 ifeq ($(TOOLCHAIN_TYPE), clang)
  ifeq ($(TOOLCHAIN_VERSION), 10.1)
    # Work around an optimizer bug seen with Xcode 10.1, but fixed by 10.3
-   BUILD_LIBLCMS_cmsopt.c_CFLAGS := -O0
+   BUILD_LIBJAVALCMS_cmsopt.c_CFLAGS := -O0
  endif
 endif
 
 # TODO: Update awt lib path when awt is converted
-$(eval $(call SetupNativeCompilation,BUILD_LIBLCMS, \
-    LIBRARY := lcms, \
+$(eval $(call SetupNativeCompilation,BUILD_LIBJAVALCMS, \
+    LIBRARY := javalcms, \
     OUTPUT_DIR := $(INSTALL_LIBRARIES_HERE), \
-    SRC := $(JDK_TOPDIR)/src/share/native/sun/java2d/cmm/lcms, \
+    SRC := $(LIBJAVALCMS_DIR), \
+    INCLUDE_FILES := $(BUILD_LIBJAVALCMS_INCLUDE_FILES), \
     LANG := C, \
     OPTIMIZATION := HIGHEST, \
     CFLAGS := $(filter-out -xc99=%none, $(CFLAGS_JDKLIB)) \
         -DCMS_DONT_USE_FAST_FLOOR \
         $(SHARED_LIBRARY_FLAGS) \
         -I$(JDK_TOPDIR)/src/share/native/sun/java2d \
-        -I$(JDK_TOPDIR)/src/share/native/sun/awt/debug, \
+        -I$(JDK_TOPDIR)/src/share/native/sun/awt/debug \
+        $(BUILD_LIBJAVALCMS_HEADERS) \
+        $(LCMS_CFLAGS), \
     CFLAGS_solaris := -xc99=no_lib, \
     CFLAGS_windows := -DCMS_IS_WINDOWS_, \
     MAPFILE := $(JDK_TOPDIR)/make/mapfiles/liblcms/mapfile-vers, \
@@ -684,38 +701,41 @@ $(eval $(call SetupNativeCompilation,BUILD_LIBLCMS, \
         $(call SET_SHARED_LIBRARY_ORIGIN), \
     LDFLAGS_solaris := /usr/lib$(OPENJDK_TARGET_CPU_ISADIR)/libm.so.2, \
     LDFLAGS_windows := $(WIN_AWT_LIB) $(WIN_JAVA_LIB), \
-    LDFLAGS_SUFFIX_solaris := -lawt -ljava -ljvm -lc, \
-    LDFLAGS_SUFFIX_macosx := $(LIBM) -lawt -ljava -ljvm, \
-    LDFLAGS_SUFFIX_linux := -lm -lawt -ljava -ljvm, \
-    LDFLAGS_SUFFIX_aix := -lm -lawt -ljava -ljvm,\
+    LDFLAGS_SUFFIX_solaris := -lawt -ljava -ljvm -lc $(LCMS_LIBS), \
+    LDFLAGS_SUFFIX_macosx := $(LIBM) -lawt -ljava -ljvm $(LCMS_LIBS), \
+    LDFLAGS_SUFFIX_linux := -lm -lawt -ljava -ljvm $(LCMS_LIBS), \
+    LDFLAGS_SUFFIX_aix := -lm -lawt -ljava -ljvm $(LCMS_LIBS),\
     VERSIONINFO_RESOURCE := $(JDK_TOPDIR)/src/windows/resource/version.rc, \
     RC_FLAGS := $(RC_FLAGS) \
         -D "JDK_FNAME=lcms.dll" \
         -D "JDK_INTERNAL_NAME=lcms" \
         -D "JDK_FTYPE=0x2L", \
-    OBJECT_DIR := $(JDK_OUTPUTDIR)/objs/liblcms, \
+    OBJECT_DIR := $(JDK_OUTPUTDIR)/objs/libjavalcms, \
     DEBUG_SYMBOLS := $(DEBUG_ALL_BINARIES)))
 
-BUILD_LIBRARIES += $(BUILD_LIBLCMS)
+BUILD_LIBRARIES += $(BUILD_LIBJAVALCMS)
 
-$(BUILD_LIBLCMS): $(BUILD_LIBAWT)
+$(BUILD_LIBJAVALCMS): $(BUILD_LIBAWT)
 
 ##########################################################################################
 
+BUILD_LIBJAVAJPEG_DIR := $(JDK_TOPDIR)/src/share/native/sun/awt/image/jpeg
+
 ifdef OPENJDK
-  BUILD_LIBJPEG_MAPFILE := $(JDK_TOPDIR)/make/mapfiles/libjpeg/mapfile-vers
+  BUILD_LIBJAVAJPEG_MAPFILE := $(JDK_TOPDIR)/make/mapfiles/libjpeg/mapfile-vers
 else
-  BUILD_LIBJPEG_MAPFILE := $(JDK_TOPDIR)/make/mapfiles/libjpeg/mapfile-vers-closed
-  BUILD_LIBJPEG_CLOSED_SRC := $(JDK_TOPDIR)/src/closed/share/native/sun/awt/image/jpeg
-  BUILD_LIBJPEG_CLOSED_INCLUDES := -I$(BUILD_LIBJPEG_CLOSED_SRC)
+  BUILD_LIBJAVAJPEG_MAPFILE := $(JDK_TOPDIR)/make/mapfiles/libjpeg/mapfile-vers-closed
+  BUILD_LIBJAVAJPEG_CLOSED_SRC := $(JDK_TOPDIR)/src/closed/share/native/sun/awt/image/jpeg
+  BUILD_LIBJAVAJPEG_CLOSED_INCLUDES := -I$(BUILD_LIBJAVAJPEG_CLOSED_SRC)
 endif
 
-BUILD_LIBJPEG_REORDER :=
+BUILD_LIBJAVAJPEG_REORDER :=
 ifeq ($(OPENJDK_TARGET_OS), solaris)
   ifneq ($(OPENJDK_TARGET_CPU), x86_64)
-    BUILD_LIBJPEG_REORDER := $(JDK_TOPDIR)/make/mapfiles/libjpeg/reorder-$(OPENJDK_TARGET_CPU)
+    BUILD_LIBJAVAJPEG_REORDER := $(JDK_TOPDIR)/make/mapfiles/libjpeg/reorder-$(OPENJDK_TARGET_CPU)
   endif
 endif
+
 
 # Suppress gcc warnings like "variable might be clobbered by 'longjmp'
 # or 'vfork'": this warning indicates that some variable is placed to
@@ -728,37 +748,50 @@ endif
 #      $(shell $(EXPR) $(CC_MAJORVER) \> 4 \| \
 #          \( $(CC_MAJORVER) = 4 \& $(CC_MINORVER) \>= 3 \) )
 #  ifeq ($(CC_43_OR_NEWER), 1)
-#    BUILD_LIBJPEG_CFLAGS_linux += -Wno-clobbered
+#    BUILD_LIBJAVAJPEG_CFLAGS_linux += -Wno-clobbered
 #  endif
 #endif
 
-$(eval $(call SetupNativeCompilation,BUILD_LIBJPEG, \
-    LIBRARY := jpeg, \
+ifeq ($(USE_EXTERNAL_LIBJPEG), true)
+  LIBJPEG_LIBS := -ljpeg
+  BUILD_LIBJAVAJPEG_INCLUDE_FILES := \
+      imageioJPEG.c \
+      jpegdecoder.c
+  BUILD_LIBJAVAJPEG_HEADERS :=
+else
+  LIBJPEG_LIBS :=
+  BUILD_LIBJAVAJPEG_INCLUDE_FILES :=
+  BUILD_LIBJAVAJPEG_HEADERS := -I$(BUILD_LIBJAVAJPEG_DIR)
+endif
+
+$(eval $(call SetupNativeCompilation,BUILD_LIBJAVAJPEG, \
+    LIBRARY := javajpeg, \
     OUTPUT_DIR := $(INSTALL_LIBRARIES_HERE), \
-    SRC := $(BUILD_LIBJPEG_CLOSED_SRC) \
-        $(JDK_TOPDIR)/src/share/native/sun/awt/image/jpeg, \
+    SRC := $(BUILD_LIBJAVAJPEG_CLOSED_SRC) \
+        $(BUILD_LIBJAVAJPEG_DIR), \
+    INCLUDE_FILES := $(BUILD_LIBJAVAJPEG_INCLUDE_FILES), \
     LANG := C, \
     OPTIMIZATION := HIGHEST, \
     CFLAGS := $(CFLAGS_JDKLIB) \
-        $(BUILD_LIBJPEG_CLOSED_INCLUDES) \
-        -I$(JDK_TOPDIR)/src/share/native/sun/awt/image/jpeg, \
-    MAPFILE := $(BUILD_LIBJPEG_MAPFILE), \
+        $(BUILD_LIBJAVAJPEG_CLOSED_INCLUDES) \
+        $(BUILD_LIBJAVAJPEG_HEADERS), \
+    MAPFILE := $(BUILD_LIBJAVAJPEG_MAPFILE), \
     LDFLAGS := $(LDFLAGS_JDKLIB) \
         $(call SET_SHARED_LIBRARY_ORIGIN), \
     LDFLAGS_windows := $(WIN_JAVA_LIB) jvm.lib, \
-    LDFLAGS_SUFFIX := $(LDFLAGS_JDKLIB_SUFFIX), \
+    LDFLAGS_SUFFIX := $(LIBJPEG_LIBS) $(LDFLAGS_JDKLIB_SUFFIX), \
     VERSIONINFO_RESOURCE := $(JDK_TOPDIR)/src/windows/resource/version.rc, \
     RC_FLAGS := $(RC_FLAGS) \
-        -D "JDK_FNAME=jpeg.dll" \
-        -D "JDK_INTERNAL_NAME=jpeg" \
+        -D "JDK_FNAME=javajpeg.dll" \
+        -D "JDK_INTERNAL_NAME=javajpeg" \
         -D "JDK_FTYPE=0x2L", \
-    REORDER := $(BUILD_LIBJPEG_REORDER), \
+    REORDER := $(BUILD_LIBJAVAJPEG_REORDER), \
     OBJECT_DIR := $(JDK_OUTPUTDIR)/objs/libjpeg, \
     DEBUG_SYMBOLS := $(DEBUG_ALL_BINARIES)))
 
-$(BUILD_LIBJPEG): $(BUILD_LIBJAVA)
+$(BUILD_LIBJAVAJPEG): $(BUILD_LIBJAVA)
 
-BUILD_LIBRARIES += $(BUILD_LIBJPEG)
+BUILD_LIBRARIES += $(BUILD_LIBJAVAJPEG)
 
 ##########################################################################################
 
@@ -863,6 +896,11 @@ ifndef OPENJDK
   LIBFONTMANAGER_EXCLUDE_FILES += freetypeScaler.c
 else
   FONT_HEADERS := $(FREETYPE_CFLAGS)
+  ifeq ($(IMPROVED_FONT_RENDERING),true)
+    FONT_HEADERS += $(FONTCONFIG_CFLAGS)
+    IMPROVED_FONT_RENDERING_DEFINES := -DIMPROVED_FONT_RENDERING
+    IMPROVED_FONT_RENDERING_LIBS := $(FONTCONFIG_LIBS)
+  endif
   BUILD_LIBFONTMANAGER_MAPFILE := $(JDK_TOPDIR)/make/mapfiles/libfontmanager/mapfile-vers.openjdk
   BUILD_LIBFONTMANAGER_FONTLIB := $(FREETYPE_LIBS)
 endif
@@ -885,7 +923,7 @@ endif
 
 BUILD_LIBFONTMANAGER_CFLAGS_COMMON := \
     $(X_CFLAGS) \
-    -DLE_STANDALONE -DHEADLESS \
+    -DLE_STANDALONE -DHEADLESS $(IMPROVED_FONT_RENDERING_DEFINES) \
     $(FONT_HEADERS) \
     -I$(JDK_TOPDIR)/src/share/native/sun/font \
     -I$(JDK_TOPDIR)/src/share/native/sun/font/layout \
@@ -923,7 +961,7 @@ $(eval $(call SetupNativeCompilation,BUILD_LIBFONTMANAGER, \
     LDFLAGS := $(subst -Xlinker -z -Xlinker defs,, \
         $(subst -Wl$(COMMA)-z$(COMMA)defs,,$(LDFLAGS_JDKLIB))) $(LDFLAGS_CXX_JDK) \
         $(call SET_SHARED_LIBRARY_ORIGIN), \
-    LDFLAGS_SUFFIX := $(BUILD_LIBFONTMANAGER_FONTLIB), \
+    LDFLAGS_SUFFIX := $(BUILD_LIBFONTMANAGER_FONTLIB) $(IMPROVED_FONT_RENDERING_LIBS), \
     LDFLAGS_SUFFIX_linux := -lawt $(LIBM) $(LIBCXX) -ljava -ljvm -lc, \
     LDFLAGS_SUFFIX_solaris := -lawt -lawt_headless -lc $(LIBM) $(LIBCXX) -ljava -ljvm, \
     LDFLAGS_SUFFIX_aix := -lawt -lawt_headless $(LIBM) $(LIBCXX) -ljava -ljvm,\
@@ -1139,7 +1177,6 @@ endif
 ifndef BUILD_HEADLESS_ONLY
   LIBSPLASHSCREEN_DIRS := \
     $(JDK_TOPDIR)/src/share/native/sun/awt/image/jpeg \
-    $(JDK_TOPDIR)/src/share/native/sun/awt/libpng \
     $(JDK_TOPDIR)/src/share/native/sun/awt/splashscreen
 
   ifeq ($(USE_EXTERNAL_LIBGIF), true)
@@ -1147,6 +1184,18 @@ ifndef BUILD_HEADLESS_ONLY
   else
     LIBSPLASHSCREEN_DIRS += $(JDK_TOPDIR)/src/share/native/sun/awt/giflib
     GIFLIB_CFLAGS := -I$(JDK_TOPDIR)/src/share/native/sun/awt/giflib
+  endif
+
+  ifeq ($(USE_EXTERNAL_LIBJPEG), true)
+    LIBJPEG_LDFLAGS := -ljpeg
+  else
+    LIBSPLASHSCREEN_DIRS += $(JDK_TOPDIR)/src/share/native/sun/awt/image/jpeg
+    LIBJPEG_CFLAGS := -I$(JDK_TOPDIR)/src/share/native/sun/awt/image/jpeg
+  endif
+
+  ifeq ($(USE_EXTERNAL_LIBPNG), false)
+    LIBSPLASHSCREEN_DIRS += $(JDK_TOPDIR)/src/share/native/sun/awt/libpng
+    LIBPNG_CFLAGS := -I$(JDK_TOPDIR)/src/share/native/sun/awt/libpng
   endif
 
   ifneq ($(OPENJDK_TARGET_OS), macosx)
@@ -1205,11 +1254,13 @@ ifndef BUILD_HEADLESS_ONLY
       EXCLUDE_FILES := imageioJPEG.c jpegdecoder.c pngtest.c, \
       LANG := C, \
       OPTIMIZATION := LOW, \
-      CFLAGS := $(LIBSPLASHSCREEN_CFLAGS) $(CFLAGS_JDKLIB) $(GIFLIB_CFLAGS), \
+      CFLAGS := $(LIBSPLASHSCREEN_CFLAGS) $(CFLAGS_JDKLIB) \
+                $(GIFLIB_CFLAGS) $(LIBJPEG_CFLAGS) $(PNG_CFLAGS), \
       MAPFILE := $(JDK_TOPDIR)/make/mapfiles/libsplashscreen/mapfile-vers, \
       LDFLAGS := $(LDFLAGS_JDKLIB) \
           $(call SET_SHARED_LIBRARY_ORIGIN), \
-      LDFLAGS_SUFFIX := $(LIBSPLASHSCREEN_LDFLAGS_SUFFIX) $(LIBZ) $(GIFLIB_LDFLAGS), \
+      LDFLAGS_SUFFIX := $(LIBSPLASHSCREEN_LDFLAGS_SUFFIX) $(LIBZ) \
+                        $(GIFLIB_LDFLAGS) $(LIBJPEG_LDFLAGS) $(PNG_LIBS), \
       LDFLAGS_SUFFIX_solaris := -lc, \
       VERSIONINFO_RESOURCE := $(JDK_TOPDIR)/src/windows/resource/version.rc, \
       RC_FLAGS := $(RC_FLAGS) \

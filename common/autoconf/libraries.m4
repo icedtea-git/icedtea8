@@ -161,7 +161,7 @@ AC_DEFUN_ONCE([LIB_SETUP_X11],
   CFLAGS="$CFLAGS $X_CFLAGS"
 
   # Need to include Xlib.h and Xutil.h to avoid "present but cannot be compiled" warnings on Solaris 10
-  AC_CHECK_HEADERS([X11/extensions/shape.h X11/extensions/Xrender.h X11/extensions/XTest.h X11/Intrinsic.h],
+  AC_CHECK_HEADERS([X11/extensions/shape.h X11/extensions/Xrender.h X11/extensions/XTest.h X11/Intrinsic.h X11/extensions/Xcomposite.h],
       [X11_A_OK=yes],
       [X11_A_OK=no; break],
       [
@@ -175,7 +175,7 @@ AC_DEFUN_ONCE([LIB_SETUP_X11],
 
   if test "x$X11_A_OK" = xno && test "x$X11_NOT_NEEDED" != xyes; then
     HELP_MSG_MISSING_DEPENDENCY([x11])
-    AC_MSG_ERROR([Could not find all X11 headers (shape.h Xrender.h XTest.h Intrinsic.h). $HELP_MSG])
+    AC_MSG_ERROR([Could not find all X11 headers (shape.h Xrender.h XTest.h Intrinsic.h Xcomposite.h). $HELP_MSG])
   fi
 
   AC_SUBST(X_CFLAGS)
@@ -774,11 +774,36 @@ AC_DEFUN_ONCE([LIB_SETUP_MISC_LIBS],
   # Check for the jpeg library
   #
 
-  USE_EXTERNAL_LIBJPEG=true
-  AC_CHECK_LIB(jpeg, main, [],
-      [ USE_EXTERNAL_LIBJPEG=false
-      AC_MSG_NOTICE([Will use jpeg decoder bundled with the OpenJDK source])
-  ])
+  AC_ARG_WITH(libjpeg, [AS_HELP_STRING([--with-libjpeg],
+      [use libjpeg from build system or OpenJDK source (system, bundled) @<:@bundled@:>@])])
+
+  AC_MSG_CHECKING([for which libjpeg to use])
+
+  # default is bundled
+  DEFAULT_LIBJPEG=bundled
+
+  #
+  # if user didn't specify, use DEFAULT_LIBJPEG
+  #
+  if test "x${with_libjpeg}" = "x"; then
+    with_libjpeg=${DEFAULT_LIBJPEG}
+  fi
+
+  AC_MSG_RESULT(${with_libjpeg})
+
+  if test "x${with_libjpeg}" = "xbundled"; then
+    USE_EXTERNAL_LIBJPEG=false
+  elif test "x${with_libjpeg}" = "xsystem"; then
+    AC_CHECK_HEADER(jpeglib.h, [],
+        [ AC_MSG_ERROR([--with-libjpeg=system specified, but jpeglib.h not found!])])
+    AC_CHECK_LIB(jpeg, jpeg_CreateDecompress, [],
+        [ AC_MSG_ERROR([--with-libjpeg=system specified, but no libjpeg found])])
+
+    USE_EXTERNAL_LIBJPEG=true
+  else
+    AC_MSG_ERROR([Invalid use of --with-libjpeg: ${with_libjpeg}, use 'system' or 'bundled'])
+  fi
+
   AC_SUBST(USE_EXTERNAL_LIBJPEG)
 
   ###############################################################################
@@ -817,6 +842,82 @@ AC_DEFUN_ONCE([LIB_SETUP_MISC_LIBS],
     AC_MSG_ERROR([Invalid value of --with-giflib: ${with_giflib}, use 'system' or 'bundled'])
   fi
   AC_SUBST(USE_EXTERNAL_LIBGIF)
+
+  ###############################################################################
+  #
+  # Check for the lcms2 library
+  #
+
+  AC_ARG_WITH(lcms, [AS_HELP_STRING([--with-lcms],
+  	[use lcms2 from build system or OpenJDK source (system, bundled) @<:@bundled@:>@])])
+
+  AC_MSG_CHECKING([for which lcms to use])
+
+  DEFAULT_LCMS=bundled
+
+  #
+  # If user didn't specify, use DEFAULT_LCMS
+  #
+  if test "x${with_lcms}" = "x"; then
+      with_lcms=${DEFAULT_LCMS}
+  fi
+
+  if test "x${with_lcms}" = "xbundled"; then
+    USE_EXTERNAL_LCMS=false
+    AC_MSG_RESULT([bundled])
+  elif test "x${with_lcms}" = "xsystem"; then
+    AC_MSG_RESULT([system])
+    PKG_CHECK_MODULES([LCMS], [lcms2], [LCMS_FOUND=yes], [LCMS_FOUND=no])
+    if test "x${LCMS_FOUND}" = "xyes"; then
+      USE_EXTERNAL_LCMS=true
+    else
+      AC_MSG_ERROR([--with-lcms=system specified, but no lcms found!])
+    fi
+  else
+    AC_MSG_ERROR([Invalid value for --with-lcms: ${with_lcms}, use 'system' or 'bundled'])
+  fi
+
+  AC_SUBST(USE_EXTERNAL_LCMS)
+
+  ###############################################################################
+  #
+  # Check for the png library
+  #
+
+  AC_ARG_WITH(libpng, [AS_HELP_STRING([--with-libpng],
+     [use libpng from build system or OpenJDK source (system, bundled) @<:@bundled@:>@])])
+
+
+  AC_MSG_CHECKING([for which libpng to use])
+
+  # default is bundled
+  DEFAULT_LIBPNG=bundled
+
+  #
+  # if user didn't specify, use DEFAULT_LIBPNG
+  #
+  if test "x${with_libpng}" = "x"; then
+      with_libpng=${DEFAULT_LIBPNG}
+  fi
+
+  if test "x${with_libpng}" = "xbundled"; then
+      USE_EXTERNAL_LIBPNG=false
+      AC_MSG_RESULT([bundled])
+  elif test "x${with_libpng}" = "xsystem"; then
+      PKG_CHECK_MODULES(PNG, libpng,
+                   [ LIBPNG_FOUND=yes ],
+                   [ LIBPNG_FOUND=no ])
+      if test "x${LIBPNG_FOUND}" = "xyes"; then
+          USE_EXTERNAL_LIBPNG=true
+          AC_MSG_RESULT([system])
+      else
+          AC_MSG_RESULT([system not found])
+          AC_MSG_ERROR([--with-libpng=system specified, but no libpng found!])
+      fi
+  else
+      AC_MSG_ERROR([Invalid value of --with-libpng: ${with_libpng}, use 'system' or 'bundled'])
+  fi
+  AC_SUBST(USE_EXTERNAL_LIBPNG)
 
   ###############################################################################
   #
@@ -910,6 +1011,172 @@ AC_DEFUN_ONCE([LIB_SETUP_MISC_LIBS],
   LIBDL="$LIBS"
   AC_SUBST(LIBDL)
   LIBS="$save_LIBS"
+
+  ###############################################################################
+  #
+  # Check whether infinality support is required (requires fontconfig)
+  #
+
+  AC_MSG_CHECKING([whether to use fontconfig to provide better font rendering])
+
+  # default is no
+  DEFAULT_IMPROVED_FONT_RENDERING=no
+
+  AC_ARG_ENABLE([improved-font-rendering], [AS_HELP_STRING([--enable-improved-font-rendering],
+     [build with fontconfig-enhanced font rendering @<:@disabled@:>@])],
+  [
+    case "${enableval}" in
+      yes)
+        enable_improved_font_rendering=yes
+        ;;
+      *)
+        enable_improved_font_rendering=no
+        ;;
+    esac
+  ],
+  [
+    enable_improved_font_rendering=${DEFAULT_IMPROVED_FONT_RENDERING}
+  ])
+  AC_MSG_RESULT([$enable_improved_font_rendering])
+
+  if test "x${enable_improved_font_rendering}" = "xyes"; then
+    PKG_CHECK_MODULES(FONTCONFIG, fontconfig,[FONTCONFIG_FOUND=yes],[FONTCONFIG_FOUND=no])
+    if test "x${FONTCONFIG_FOUND}" = xno
+    then
+      AC_MSG_ERROR([Could not find fontconfig; improved font rendering support requires fontconfig.])
+    fi
+    IMPROVED_FONT_RENDERING_SUPPORT=true
+  fi
+  AC_SUBST(IMPROVED_FONT_RENDERING_SUPPORT)
+
+  ###############################################################################
+  #
+  # Check for the Kerberos libraries
+  #
+
+  AC_MSG_CHECKING([whether to use the system Kerberos installation to obtain the cache location])
+
+  # default is bundled
+  DEFAULT_SYSTEM_KRB5=no
+
+  AC_ARG_ENABLE([system-kerberos], [AS_HELP_STRING([--enable-system-kerberos],
+     [use the system Kerberos to get the cache location @<:@disabled@:>@])],
+  [
+    case "${enableval}" in
+      yes)
+        system_krb5=yes
+        ;;
+      *)
+        system_krb5=no
+        ;;
+    esac
+  ],
+  [
+    system_krb5=${DEFAULT_SYSTEM_KRB5}
+  ])
+  AC_MSG_RESULT([$system_krb5])
+
+  if test "x${system_krb5}" = "xyes"; then
+      PKG_CHECK_MODULES(KRB5, krb5, [KRB5_FOUND=yes], [KRB5_FOUND=no])
+      if test "x${KRB5_FOUND}" = "xyes"; then
+	  USE_EXTERNAL_KRB5=true
+      else
+	  AC_MSG_NOTICE([Could not find Kerberos using pkg-config; trying via krb5.h and krb5 library])
+          AC_CHECK_LIB([krb5], [krb5_cc_default],
+            , [AC_MSG_ERROR([Could not find Kerberos library; install Kerberos or build with --disable-system-kerberos to use the default cache location.])])
+          AC_CHECK_HEADER([krb5.h],
+            , [AC_MSG_ERROR([Could not find Kerberos header; install Kerberos or build with --disable-system-kerberos to use the default cache location.])])
+      	  KRB5_LIBS="-lkrb5"
+      fi
+  else
+      USE_EXTERNAL_KRB5=false
+  fi
+  AC_SUBST(USE_EXTERNAL_KRB5)
+
+  ###############################################################################
+  #
+  # Check for the PCSC libraries
+  #
+
+  AC_MSG_CHECKING([whether to use the system libpcsclite installation])
+
+  # default is bundled
+  DEFAULT_SYSTEM_PCSC=no
+
+  AC_ARG_ENABLE([system-pcsc], [AS_HELP_STRING([--enable-system-pcsc],
+     [use the system libpcsclite @<:@disabled@:>@])],
+  [
+    case "${enableval}" in
+      yes)
+        system_pcsc=yes
+        ;;
+      *)
+        system_pcsc=no
+        ;;
+    esac
+  ],
+  [
+    system_pcsc=${DEFAULT_SYSTEM_PCSC}
+  ])
+  AC_MSG_RESULT([$system_pcsc])
+
+  if test "x${system_pcsc}" = "xyes"; then
+      PKG_CHECK_MODULES(PCSC, libpcsclite, [PCSC_FOUND=yes], [PCSC_FOUND=no])
+      if test "x${PCSC_FOUND}" = "xyes"; then
+	  USE_EXTERNAL_PCSC=true
+      else
+	  AC_MSG_ERROR([--enable-system-pcsc specified, but libpcsclite not found.])
+      fi
+  else
+      USE_EXTERNAL_PCSC=false
+  fi
+  AC_SUBST(USE_EXTERNAL_PCSC)
+
+  ###############################################################################
+  #
+  # Check for the SCTP libraries
+  #
+
+  AC_MSG_CHECKING([whether to use the system libsctp installation])
+
+  # default is bundled
+  DEFAULT_SYSTEM_SCTP=no
+
+  AC_ARG_ENABLE([system-sctp], [AS_HELP_STRING([--enable-system-sctp],
+     [use the system SCTP library @<:@disabled@:>@])],
+  [
+    case "${enableval}" in
+      yes)
+        system_sctp=yes
+        ;;
+      *)
+        system_sctp=no
+        ;;
+    esac
+  ],
+  [
+    system_sctp=${DEFAULT_SYSTEM_SCTP}
+  ])
+  AC_MSG_RESULT([$system_sctp])
+
+  if test "x${system_sctp}" = "xyes"; then
+      dnl Check for SCTP headers and libraries.
+      if test "x${SCTP_CFLAGS}" = "x"; then
+          AC_CHECK_HEADER([netinet/sctp.h],
+            , [AC_MSG_ERROR([Could not find SCTP header; install SCTP or build with --disable-system-sctp to use the in-tree copy.])])
+      fi
+      if test "x${SCTP_LIBS}" = "x"; then
+          AC_CHECK_LIB([sctp], [sctp_bindx],
+            , [AC_MSG_ERROR([Could not find SCTP library; install SCTP or build with --disable-system-sctp to use the in-tree copy.])])
+          SCTP_LIBS="-lsctp"
+      fi
+      USE_EXTERNAL_SCTP=true
+  else
+      USE_EXTERNAL_SCTP=false
+  fi
+  AC_ARG_VAR(SCTP_CFLAGS, [C compiler flags for the SCTP library])
+  AC_ARG_VAR(SCTP_LIBS, [linker flags for the SCTP library, overriding -lsctp])
+  AC_SUBST(USE_EXTERNAL_SCTP)
 ])
 
 AC_DEFUN_ONCE([LIB_SETUP_STATIC_LINK_LIBSTDCPP],

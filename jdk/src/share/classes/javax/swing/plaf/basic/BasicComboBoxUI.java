@@ -173,11 +173,9 @@ public class BasicComboBoxUI extends ComboBoxUI {
     private Dimension cachedDisplaySize = new Dimension( 0, 0 );
 
     // Key used for lookup of the DefaultListCellRenderer in the AppContext.
-    private static final Object COMBO_UI_LIST_CELL_RENDERER_KEY =
-                        new StringBuffer("DefaultListCellRendererKey");
+    private static final Object COMBO_UI_LIST_CELL_RENDERER_KEY = new Object(); // DefaultListCellRendererKey
 
-    static final StringBuffer HIDE_POPUP_KEY
-                  = new StringBuffer("HidePopupKey");
+    static final Object HIDE_POPUP_KEY = new Object(); // HidePopupKey
 
     /**
      * Whether or not all cells have the same baseline.

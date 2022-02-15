@@ -222,8 +222,7 @@ public class JInternalFrame extends JComponent implements
     /** Constrained property name indicating that the internal frame is iconified. */
     public final static String IS_ICON_PROPERTY = "icon";
 
-    private static final Object PROPERTY_CHANGE_LISTENER_KEY =
-        new StringBuilder("InternalFramePropertyChangeListener");
+    private static final Object PROPERTY_CHANGE_LISTENER_KEY = new Object(); // InternalFramePropertyChangeListener
 
     private static void addPropertyChangeListenerIfNecessary() {
         if (AppContext.getAppContext().get(PROPERTY_CHANGE_LISTENER_KEY) ==

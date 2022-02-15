@@ -195,7 +195,8 @@ JNIEXPORT void JNICALL Java_sun_net_ExtendedOptionsImpl_setFlowOption
     int fd = getFD(env, fileDesc);
 
     if (fd < 0) {
-        NET_ERROR(env, JNU_JAVANETPKG "SocketException", "socket closed");
+        JNU_ThrowByNameWithLastError(env, "java/net/SocketException",
+				     "socket closed");
         return;
     } else {
         sock_flow_props_t props;
@@ -221,11 +222,11 @@ JNIEXPORT void JNICALL Java_sun_net_ExtendedOptionsImpl_setFlowOption
                 JNU_ThrowByName(env, "java/lang/UnsupportedOperationException",
                         "unsupported socket option");
             } else if (errno == EACCES || errno == EPERM) {
-                NET_ERROR(env, JNU_JAVANETPKG "SocketException",
-                                "Permission denied");
+                JNU_ThrowByNameWithLastError(env, "java/net/SocketException",
+					     "Permission denied");
             } else {
-                NET_ERROR(env, JNU_JAVANETPKG "SocketException",
-                                "set option SO_FLOW_SLA failed");
+                JNU_ThrowByNameWithLastError(env, "java/net/SocketException",
+					     "set option SO_FLOW_SLA failed");
             }
             return;
         }
@@ -243,7 +244,7 @@ JNIEXPORT void JNICALL Java_sun_net_ExtendedOptionsImpl_getFlowOption
     int fd = getFD(env, fileDesc);
 
     if (fd < 0) {
-        NET_ERROR(env, JNU_JAVANETPKG "SocketException", "socket closed");
+        JNU_ThrowByNameWithLastError(env, "java/net/SocketException", "socket closed");
         return;
     } else {
         sock_flow_props_t props;
@@ -256,11 +257,11 @@ JNIEXPORT void JNICALL Java_sun_net_ExtendedOptionsImpl_getFlowOption
                 JNU_ThrowByName(env, "java/lang/UnsupportedOperationException",
                         "unsupported socket option");
             } else if (errno == EACCES || errno == EPERM) {
-                NET_ERROR(env, JNU_JAVANETPKG "SocketException",
-                                "Permission denied");
+                JNU_ThrowByNameWithLastError(env, "java/net/SocketException",
+					     "Permission denied");
             } else {
-                NET_ERROR(env, JNU_JAVANETPKG "SocketException",
-                                "set option SO_FLOW_SLA failed");
+                JNU_ThrowByNameWithLastError(env, "java/net/SocketException",
+					     "set option SO_FLOW_SLA failed");
             }
             return;
         }
@@ -383,7 +384,7 @@ static void setTcpSocketOption
     int fd = getFD(env, fileDesc);
 
     if (fd < 0) {
-        NET_ERROR(env, JNU_JAVANETPKG "SocketException", "socket closed");
+        JNU_ThrowByNameWithLastError(env, "java/net/SocketException", "socket closed");
         return;
     } else {
         jint rv = setsockopt(fd, optlevel, opt, &optval, sizeof (optval));
@@ -396,7 +397,7 @@ static jint getTcpSocketOption
     int fd = getFD(env, fileDesc);
 
     if (fd < 0) {
-        NET_ERROR(env, JNU_JAVANETPKG "SocketException", "socket closed");
+        JNU_ThrowByNameWithLastError(env, "java/net/SocketException", "socket closed");
         return -1;
     } else {
         jint optval, rv;

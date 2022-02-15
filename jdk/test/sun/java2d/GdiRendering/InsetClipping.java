@@ -23,6 +23,7 @@
 
 /**
  * @test
+ * @key headful
  * @bug 4873505 6588884
  * @author cheth
  * @summary verifies that drawImage behaves the bounds of a complex

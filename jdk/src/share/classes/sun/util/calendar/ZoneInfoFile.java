@@ -31,6 +31,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
 import java.security.AccessController;
@@ -47,6 +48,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.SimpleTimeZone;
 import java.util.concurrent.ConcurrentHashMap;
@@ -251,7 +253,15 @@ public final class ZoneInfoFile {
         AccessController.doPrivileged(new PrivilegedAction<Object>() {
             public Object run() {
                 try {
-                    String libDir = System.getProperty("java.home") + File.separator + "lib";
+                    final String homeDir = System.getProperty("java.home");
+                    if (homeDir == null) {
+                        throw new Error("java.home is not set");
+                    }
+                    String libDir = homeDir + File.separator + "lib";
+                    String otherDir = getZoneInfoDir(libDir);
+                    if (otherDir != null)
+                        libDir = otherDir;
+
                     try (DataInputStream dis = new DataInputStream(
                              new BufferedInputStream(new FileInputStream(
                                  new File(libDir, "tzdb.dat"))))) {
@@ -261,6 +271,32 @@ public final class ZoneInfoFile {
                     throw new Error(x);
                 }
                 return null;
+            }
+        });
+    }
+
+    public static String getZoneInfoDir(final String libDir) {
+        return AccessController.doPrivileged (new PrivilegedAction<String>() {
+            @Override
+            public String run() {
+                File f = new File(libDir + File.separator + "tz.properties");
+                try (BufferedInputStream bin = new BufferedInputStream(new FileInputStream(f))) {
+                    Properties props = new Properties();
+                    props.load(bin);
+                    String dir = props.getProperty("sun.zoneinfo.dir");
+                    if (dir == null) {
+                        return null;
+                    }
+                    File tzdbdat = new File(dir, "tzdb.dat");
+                    if (tzdbdat.exists()) {
+                        return dir;
+                    }
+                    return null;
+                } catch (FileNotFoundException e) {
+                    return null;
+                } catch (IOException e) {
+                    throw new Error(e);
+                }
             }
         });
     }

@@ -1051,16 +1051,6 @@ Java_sun_font_FontConfigManager_getFontConfig
     CHECK_NULL(fontFileID = (*env)->GetFieldID(env, fcFontClass,
                                     "fontFile", "Ljava/lang/String;"));
 
-    jclass fontUtilitiesClass =
-        (*env)->FindClass(env, "sun/font/FontUtilities");
-    CHECK_NULL(fontUtilitiesClass);
-    jfieldID isOpenJDKID =
-        (*env)->GetStaticFieldID(env, fontUtilitiesClass, "isOpenJDK", "Z");
-    CHECK_NULL(isOpenJDKID);
-    jboolean isOpenJDK =
-        (*env)->GetStaticBooleanField(env, fontUtilitiesClass, isOpenJDKID);
-
-
     if ((libfontconfig = openFontConfig()) == NULL) {
         return;
     }
@@ -1249,7 +1239,7 @@ Java_sun_font_FontConfigManager_getFontConfig
                 && (strcmp((char*)fontformat, "TrueType") != 0)
 #if defined(__linux__) || defined(_AIX)
                 && (strcmp((char*)fontformat, "Type 1") != 0)
-                && !(isOpenJDK && (strcmp((char*)fontformat, "CFF") == 0))
+                && (strcmp((char*)fontformat, "CFF") != 0)
 #endif
              ) {
                 continue;

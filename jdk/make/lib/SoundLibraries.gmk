@@ -137,7 +137,51 @@ else
   endif
 
   ifeq ($(OPENJDK_TARGET_CPU), ppc64)
-       LIBJSOUND_CFLAGS += -DX_ARCH=X_PPC64
+    LIBJSOUND_CFLAGS += -DX_ARCH=X_PPC64
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), alpha)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_ALPHA
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), ia64)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_IA64
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), m68k)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_M68K
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), mips)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_MIPS
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), mipsel)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_MIPSEL
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), s390)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_S390
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), s390x)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_S390X
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), sh)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_SH
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), ppc64le)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_PPC64LE
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), aarch64)
+       LIBJSOUND_CFLAGS += -DX_ARCH=X_AARCH64
+  endif
+
+  ifeq ($(OPENJDK_TARGET_CPU), aarch32)
+    LIBJSOUND_CFLAGS += -DX_ARCH=X_AARCH32
   endif
 
   ifeq ($(OPENJDK_TARGET_CPU), ppc64le)

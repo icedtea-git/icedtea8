@@ -56,6 +56,7 @@ import sun.security.action.GetPropertyAction;
 import sun.security.action.GetBooleanAction;
 import sun.util.logging.PlatformLogger;
 import sun.security.util.SecurityConstants;
+import static sun.awt.X11.XlibUtil.scaleDown;
 
 public final class XToolkit extends UNIXToolkit implements Runnable {
     private static final PlatformLogger log = PlatformLogger.getLogger("sun.awt.X11.XToolkit");
@@ -415,7 +416,7 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
         }
     }
 
-    private void processGlobalMotionEvent(XEvent e) {
+    private void processGlobalMotionEvent(XEvent e, XBaseWindow win) {
         // Only our windows guaranteely generate MotionNotify, so we
         // should track enter/leave, to catch the moment when to
         // switch to XQueryPointer
@@ -424,9 +425,11 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
             awtLock();
             try {
                 if (lastCursorPos == null) {
-                    lastCursorPos = new Point(ev.get_x_root(), ev.get_y_root());
+                    lastCursorPos = new Point(win.scaleDown(ev.get_x_root()),
+                                              win.scaleDown(ev.get_y_root()));
                 } else {
-                    lastCursorPos.setLocation(ev.get_x_root(), ev.get_y_root());
+                    lastCursorPos.setLocation(win.scaleDown(ev.get_x_root()),
+                                              win.scaleDown(ev.get_y_root()));
                 }
             } finally {
                 awtUnlock();
@@ -445,9 +448,11 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
             awtLock();
             try {
                 if (lastCursorPos == null) {
-                    lastCursorPos = new Point(ev.get_x_root(), ev.get_y_root());
+                    lastCursorPos = new Point(win.scaleDown(ev.get_x_root()),
+                                              win.scaleDown(ev.get_y_root()));
                 } else {
-                    lastCursorPos.setLocation(ev.get_x_root(), ev.get_y_root());
+                    lastCursorPos.setLocation(win.scaleDown(ev.get_x_root()),
+                                              win.scaleDown(ev.get_y_root()));
                 }
             } finally {
                 awtUnlock();
@@ -485,10 +490,11 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
     private void dispatchEvent(XEvent ev) {
         final XAnyEvent xany = ev.get_xany();
 
-        if (windowToXWindow(xany.get_window()) != null &&
-             (ev.get_type() == XConstants.MotionNotify || ev.get_type() == XConstants.EnterNotify || ev.get_type() == XConstants.LeaveNotify))
-        {
-            processGlobalMotionEvent(ev);
+        XBaseWindow baseWindow = windowToXWindow(xany.get_window());
+        if (baseWindow != null && (ev.get_type() == XConstants.MotionNotify
+                || ev.get_type() == XConstants.EnterNotify
+                || ev.get_type() == XConstants.LeaveNotify)) {
+            processGlobalMotionEvent(ev, baseWindow);
         }
 
         if( ev.get_type() == XConstants.MappingNotify ) {
@@ -662,8 +668,8 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
                     XlibWrapper.XGetWindowAttributes(XToolkit.getDisplay(),
                                                      XToolkit.getDefaultRootWindow(),
                                                      pattr.pData);
-                    screenWidth  = (int) pattr.get_width();
-                    screenHeight = (int) pattr.get_height();
+                    screenWidth  = config.scaleDown(pattr.get_width());
+                    screenHeight = config.scaleDown(pattr.get_height());
                 } finally {
                     pattr.dispose();
                 }
@@ -691,7 +697,7 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
         return getDefaultScreenHeight();
     }
 
-    private static Rectangle getWorkArea(long root)
+    private static Rectangle getWorkArea(long root, int scale)
     {
         XAtom XA_NET_WORKAREA = XAtom.get("_NET_WORKAREA");
 
@@ -707,7 +713,10 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
                 int rootWidth = (int)Native.getLong(native_ptr, 2);
                 int rootHeight = (int)Native.getLong(native_ptr, 3);
 
-                return new Rectangle(rootX, rootY, rootWidth, rootHeight);
+                return new Rectangle(scaleDown(rootX, scale),
+                                     scaleDown(rootY, scale),
+                                     scaleDown(rootWidth, scale),
+                                     scaleDown(rootHeight, scale));
             }
         }
         finally
@@ -751,22 +760,22 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
         XToolkit.awtLock();
         try
         {
-            X11GraphicsConfig x11gc = (X11GraphicsConfig)gc;
-            X11GraphicsDevice x11gd = (X11GraphicsDevice)x11gc.getDevice();
-            long root = XlibUtil.getRootWindow(x11gd.getScreen());
             X11GraphicsEnvironment x11ge = (X11GraphicsEnvironment)
-                GraphicsEnvironment.getLocalGraphicsEnvironment();
+                    GraphicsEnvironment.getLocalGraphicsEnvironment();
+            X11GraphicsConfig x11gc = (X11GraphicsConfig) gc;
+            long root = XlibUtil.getRootWindow(x11gc.getDevice().getScreen());
+            int scale = x11gc.getScale();
             if (x11ge.runningXinerama() && checkSTRUT()) {
                 // implementation based on _NET_WM_STRUT/_NET_WM_STRUT_PARTIAL
-                Rectangle rootBounds = XlibUtil.getWindowGeometry(root);
+                Rectangle rootBounds = XlibUtil.getWindowGeometry(root, scale);
                 Insets insets = getScreenInsetsManually(root, rootBounds,
-                                                        gc.getBounds());
+                                                        gc.getBounds(), scale);
                 if ((insets.left | insets.top | insets.bottom | insets.right) != 0
                         || rootBounds == null) {
                     return insets;
                 }
             }
-            Rectangle workArea = XToolkit.getWorkArea(root);
+            Rectangle workArea = XToolkit.getWorkArea(root, scale);
             Rectangle screen = gc.getBounds();
             if (workArea != null && screen.contains(workArea.getLocation())) {
                 workArea = workArea.intersection(screen);
@@ -776,6 +785,7 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
                 int right = screen.width - workArea.width - left;
                 return new Insets(top, left, bottom, right);
             }
+
             // Note that it is better to return zeros than inadequate values
             return new Insets(0, 0, 0, 0);
         }
@@ -812,7 +822,8 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
      *    calculated, but the system panels do not necessarily contain these
      *    hints(Gnome 3 for example).
      */
-    private Insets getScreenInsetsManually(long root, Rectangle rootBounds, Rectangle screenBounds)
+    private Insets getScreenInsetsManually(long root, Rectangle rootBounds,
+                                           Rectangle screenBounds, int scale)
     {
         /*
          * During the manual calculation of screen insets we iterate
@@ -860,20 +871,23 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
                 if (strutPresent)
                 {
                     // second, verify that window is located on the proper screen
-                    Rectangle windowBounds = XlibUtil.getWindowGeometry(window);
+                    Rectangle windowBounds = XlibUtil.getWindowGeometry(window,
+                                                                        scale);
                     if (windowLevel > 1)
                     {
-                        windowBounds = XlibUtil.translateCoordinates(window, root, windowBounds);
+                        windowBounds = XlibUtil.translateCoordinates(window, root,
+                                                                     windowBounds,
+                                                                     scale);
                     }
                     // if _NET_WM_STRUT_PARTIAL is present, we should use its values to detect
                     // if the struts area intersects with screenBounds, however some window
                     // managers don't set this hint correctly, so we just get intersection with windowBounds
                     if (windowBounds != null && windowBounds.intersects(screenBounds))
                     {
-                        int left = (int)Native.getLong(native_ptr, 0);
-                        int right = (int)Native.getLong(native_ptr, 1);
-                        int top = (int)Native.getLong(native_ptr, 2);
-                        int bottom = (int)Native.getLong(native_ptr, 3);
+                        int left = scaleDown((int)Native.getLong(native_ptr, 0), scale);
+                        int right = scaleDown((int)Native.getLong(native_ptr, 1), scale);
+                        int top = scaleDown((int)Native.getLong(native_ptr, 2), scale);
+                        int bottom = scaleDown((int)Native.getLong(native_ptr, 3), scale);
 
                         /*
                          * struts could be relative to root window bounds, so
@@ -2466,7 +2480,8 @@ public final class XToolkit extends UNIXToolkit implements Runnable {
             oops_updated = false;
             long event_number = getEventNumber();
             // Generate OOPS ConfigureNotify event
-            XlibWrapper.XMoveWindow(getDisplay(), win.getWindow(), ++oops_position, 0);
+            XlibWrapper.XMoveWindow(getDisplay(), win.getWindow(),
+                                    win.scaleUp(++oops_position), 0);
             // Change win position each time to avoid system optimization
             if (oops_position > 50) {
                 oops_position = 0;
