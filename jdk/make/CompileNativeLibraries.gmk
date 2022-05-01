@@ -42,9 +42,11 @@ $(eval $(call FillCacheFind, $(JDK_TOPDIR)/src))
 include Tools.gmk
 
 # Handle warnings appropriately
-WARNING_CFLAGS = -Wno-unused-parameter
-ifeq ($(USE_CLANG), true)
-  WARNING_CFLAGS += -Qunused-arguments
+ifneq ($(filter $(TOOLCHAIN_TYPE), gcc clang), )
+  WARNING_CFLAGS = -Wno-unused-parameter
+  ifeq ($(USE_CLANG), true)
+    WARNING_CFLAGS += -Qunused-arguments
+  endif
 endif
 
 # Include the javah generated headers.
