@@ -60,7 +60,7 @@ int NET_GetDefaultTOS(void);
 typedef union {
     struct sockaddr     him;
     struct sockaddr_in  him4;
-    struct sockaddr_in6 sa6;
+    struct sockaddr_in6 him6;
 } SOCKETADDRESS;
 
 /*
@@ -74,7 +74,7 @@ struct ipv6bind {
 };
 
 #define SOCKETADDRESS_LEN(X)    \
-        (((X)->him.sa_family==AF_INET6)? sizeof(struct SOCKADDR_IN6) : \
+        (((X)->him.sa_family==AF_INET6)? sizeof(struct sockaddr_in6) : \
                          sizeof(struct sockaddr_in))
 
 #define SOCKETADDRESS_COPY(DST,SRC) {                           \

@@ -698,7 +698,7 @@ NET_BindV6(struct ipv6bind* b, jboolean exclBind) {
         /* bind to v6 only */
         int ret;
         ret = NET_WinBind ((int)b->ipv6_fd, (struct sockaddr *)b->addr,
-                                sizeof (struct SOCKADDR_IN6), exclBind);
+                                sizeof (struct sockaddr_in6), exclBind);
         if (ret == SOCKET_ERROR) {
             CLOSE_SOCKETS_AND_RETURN;
         }
