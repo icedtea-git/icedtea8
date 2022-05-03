@@ -647,56 +647,57 @@ $(JDK_IMAGE_DIR)/src.zip: $(IMAGES_OUTPUTDIR)/src.zip
 # Post processing (strip etc)
 
 ifneq ($(STRIP_POLICY),no_strip)
-  ifeq ($(OPENJDK_TARGET_OS), windows)
-    EXEC_LIST_BIN := $(filter-out %$(notdir $(MSVCR_DLL)), $(filter %.exe %.dll, $(ALL_BIN_LIST)))
-  else
-    # Find all executables in JDK_OUTPUTDIR since they exist when this makefile is parsed
-    EXEC_LIST_BIN := $(shell $(FILE) `$(FIND) $(JDK_OUTPUTDIR)/bin -type f -name \*$(EXE_SUFFIX) ! -name \*.debuginfo` \
+  ifneq ($(POST_STRIP_CMD), )
+    ifeq ($(OPENJDK_TARGET_OS), windows)
+      EXEC_LIST_BIN := $(filter-out %$(notdir $(MSVCR_DLL)), $(filter %.exe %.dll, $(ALL_BIN_LIST)))
+    else
+      # Find all executables in JDK_OUTPUTDIR since they exist when this makefile is parsed
+      EXEC_LIST_BIN := $(shell $(FILE) `$(FIND) $(JDK_OUTPUTDIR)/bin -type f -name \*$(EXE_SUFFIX) ! -name \*.debuginfo` \
         | $(EGREP) 'ELF' | $(CUT) -d':' -f1)
-    # On mac, the old build searches for static libraries for stripping instead of shared.
-    # Not clear if it's intentional.
-    ifneq ($(OPENJDK_TARGET_OS), macosx)
-      EXEC_LIST_LIB := $(shell $(FIND) $(JDK_OUTPUTDIR)/lib -type f -name \*$(SHARED_LIBRARY_SUFFIX))
+      # On mac, the old build searches for static libraries for stripping instead of shared.
+      # Not clear if it's intentional.
+      ifneq ($(OPENJDK_TARGET_OS), macosx)
+        EXEC_LIST_LIB := $(shell $(FIND) $(JDK_OUTPUTDIR)/lib -type f -name \*$(SHARED_LIBRARY_SUFFIX))
+      endif
     endif
-  endif
-  # Filter out sjavac
-  EXEC_LIST_BIN := $(filter-out %sjavac$(EXE_SUFFIX), $(EXEC_LIST_BIN))
+    # Filter out sjavac
+    EXEC_LIST_BIN := $(filter-out %sjavac$(EXE_SUFFIX), $(EXEC_LIST_BIN))
 
-  # Filter out the overlay specific bin files
-  EXEC_LIST := $(filter-out $(OVERLAY_FILTER), $(EXEC_LIST_BIN)) $(EXEC_LIST_LIB)
-  EXEC_LIST_OVERLAY := $(filter $(OVERLAY_FILTER), $(EXEC_LIST_BIN)) $(EXEC_LIST_LIB)
+    # Filter out the overlay specific bin files
+    EXEC_LIST := $(filter-out $(OVERLAY_FILTER), $(EXEC_LIST_BIN)) $(EXEC_LIST_LIB)
+    EXEC_LIST_OVERLAY := $(filter $(OVERLAY_FILTER), $(EXEC_LIST_BIN)) $(EXEC_LIST_LIB)
 
-  # Filter out non JRE files and convert to unique touch files to depend on
-  JRE_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, $(IMAGES_OUTPUTDIR)/_strip_jre$(PROFILE)/%.stripped, \
+    # Filter out non JRE files and convert to unique touch files to depend on
+    JRE_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, $(IMAGES_OUTPUTDIR)/_strip_jre$(PROFILE)/%.stripped, \
       $(filter-out $(addprefix %, $(NOT_JRE_BIN_FILES) $(NOT_JRE_LIB_FILES) $(JDKJRE_LIB_FILES)), \
       $(EXEC_LIST)))
 
-  JDKJRE_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, \
+    JDKJRE_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, \
       $(IMAGES_OUTPUTDIR)/_strip_jdk/jre/%.stripped, \
       $(filter-out $(addprefix %, $(NOT_JRE_BIN_FILES) $(NOT_JRE_LIB_FILES)), $(EXEC_LIST)))
 
-  JDK_BIN_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, \
+    JDK_BIN_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, \
       $(IMAGES_OUTPUTDIR)/_strip_jdk/%.stripped, \
       $(filter-out $(JDK_OUTPUTDIR)/lib/%, $(EXEC_LIST)))
 
-  # Do the same for overlay image
-  JRE_OVERLAY_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, $(IMAGES_OUTPUTDIR)/_strip_jre_overlay/%.stripped, \
+    # Do the same for overlay image
+    JRE_OVERLAY_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, $(IMAGES_OUTPUTDIR)/_strip_jre_overlay/%.stripped, \
       $(filter-out $(addprefix %, $(NOT_JRE_BIN_FILES) $(NOT_JRE_LIB_FILES) $(JDKJRE_LIB_FILES)), \
       $(EXEC_LIST_OVERLAY)))
 
-  JDKJRE_OVERLAY_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, \
+    JDKJRE_OVERLAY_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, \
       $(IMAGES_OUTPUTDIR)/_strip_jdk_overlay/jre/%.stripped, \
       $(filter-out $(addprefix %, $(NOT_JRE_BIN_FILES) $(NOT_JRE_LIB_FILES)), $(EXEC_LIST_OVERLAY)))
 
-  JDK_OVERLAY_BIN_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, \
+    JDK_OVERLAY_BIN_STRIP_LIST := $(patsubst $(JDK_OUTPUTDIR)/%, \
       $(IMAGES_OUTPUTDIR)/_strip_jdk_overlay/%.stripped, \
       $(filter-out $(JDK_OUTPUTDIR)/lib/%, $(EXEC_LIST_OVERLAY)))
 
-  define mcs-file
+    define mcs-file
 	$(if $(POST_MCS_CMD), $(POST_MCS_CMD) $<)
-  endef
+    endef
 
-  define strip-file
+    define strip-file
 	$(ECHO) Stripping $(LOG_INFO) $(patsubst $(OUTPUT_ROOT)/%,%,$<)
 	$(CHMOD) u+w $<
 	$(POST_STRIP_CMD) $<
@@ -704,21 +705,22 @@ ifneq ($(STRIP_POLICY),no_strip)
 	$(CHMOD) go-w $<
 	$(MKDIR) -p $(@D)
 	$(TOUCH) $@
-  endef
+    endef
 
-  # Setup a rule for stripping files based on touch files
-  $(IMAGES_OUTPUTDIR)/_strip_jre$(PROFILE)/%.stripped: $(JRE_IMAGE_DIR)/%
+    # Setup a rule for stripping files based on touch files
+    $(IMAGES_OUTPUTDIR)/_strip_jre$(PROFILE)/%.stripped: $(JRE_IMAGE_DIR)/%
 	$(call strip-file)
 
-  $(IMAGES_OUTPUTDIR)/_strip_jdk/%.stripped: $(JDK_IMAGE_DIR)/%
+    $(IMAGES_OUTPUTDIR)/_strip_jdk/%.stripped: $(JDK_IMAGE_DIR)/%
 	$(call strip-file)
 
-  $(IMAGES_OUTPUTDIR)/_strip_jre_overlay/%.stripped: $(JRE_OVERLAY_IMAGE_DIR)/%
+    $(IMAGES_OUTPUTDIR)/_strip_jre_overlay/%.stripped: $(JRE_OVERLAY_IMAGE_DIR)/%
 	$(call strip-file)
 
-  $(IMAGES_OUTPUTDIR)/_strip_jdk_overlay/%.stripped: $(JDK_OVERLAY_IMAGE_DIR)/%
+    $(IMAGES_OUTPUTDIR)/_strip_jdk_overlay/%.stripped: $(JDK_OVERLAY_IMAGE_DIR)/%
 	$(call strip-file)
 
+  endif
 endif
 
 ################################################################################
