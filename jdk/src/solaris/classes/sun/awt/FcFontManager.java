@@ -74,9 +74,9 @@ public class FcFontManager extends SunFontManager {
         FontConfigManager.FcCompFont[] fontConfigFonts =
             getFontConfigManager().getFontConfigFonts();
         if (fontConfigFonts != null) {
-            for (int i=0; i<fontConfigFonts.length; i++) {
+            for (int i = 0; i < fontConfigFonts.length; i++) {
                 if ("sans".equals(fontConfigFonts[i].fcFamily) &&
-                    0 == fontConfigFonts[i].style) {
+                        0 == fontConfigFonts[i].style) {
                     info[0] = fontConfigFonts[i].firstFont.familyName;
                     info[1] = fontConfigFonts[i].firstFont.fontFile;
                     break;

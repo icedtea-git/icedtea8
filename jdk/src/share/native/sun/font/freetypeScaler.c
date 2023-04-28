@@ -54,7 +54,7 @@
 #define  FloatToFTFixed(f) (FT_Fixed)((f) * (float)(ftFixed1))
 #define  FTFixedToFloat(x) ((x) / (float)(ftFixed1))
 #define  FT26Dot6ToFloat(x)  ((x) / ((float) (1<<6)))
-#define  ROUND26Dot6(x) ((x + 63) & -64)
+#define  FT26Dot6ToInt(x) (((int)(x)) >> 6)
 
 typedef struct {
     /* Important note:
@@ -1142,10 +1142,18 @@ static jlong
         glyphInfo->advanceY =
             (float) (advh * FTFixedToFloat(context->transform.xy));
     } else {
-        glyphInfo->advanceX =
-            (float) FT26Dot6ToFloat(ROUND26Dot6(ftglyph->advance.x));
-        glyphInfo->advanceY =
-            (float) -FT26Dot6ToFloat(ROUND26Dot6(ftglyph->advance.y));
+        if (!ftglyph->advance.y) {
+            glyphInfo->advanceX =
+                (float) FT26Dot6ToInt(ftglyph->advance.x);
+            glyphInfo->advanceY = 0;
+        } else if (!ftglyph->advance.x) {
+            glyphInfo->advanceX = 0;
+            glyphInfo->advanceY =
+                (float) FT26Dot6ToInt(-ftglyph->advance.y);
+        } else {
+            glyphInfo->advanceX = FT26Dot6ToFloat(ftglyph->advance.x);
+            glyphInfo->advanceY = FT26Dot6ToFloat(-ftglyph->advance.y);
+        }
     }
 
     if (imageSize == 0) {
