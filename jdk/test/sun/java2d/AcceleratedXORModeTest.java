@@ -22,13 +22,13 @@
  */
 
 /*
-* @test
-* @key headful
-* @bug     8024343 8042098
-* @summary Test verifies that accelerated pipelines
-*          correctly draws primitives in XOR mode.
-* @run main/othervm -Dsun.java2d.xrender=True AcceleratedXORModeTest
-*/
+ * @test
+ * @key headful
+ * @bug     8024343 8042098
+ * @summary Test verifies that accelerated pipelines
+ *          correctly draws primitives in XOR mode.
+ * @run main/othervm -Dsun.java2d.xrender=True AcceleratedXORModeTest
+ */
 
 import java.awt.Color;
 import java.awt.Graphics2D;

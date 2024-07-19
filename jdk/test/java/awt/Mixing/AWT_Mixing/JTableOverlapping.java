@@ -36,6 +36,7 @@ import javax.swing.*;
  * @build Util
  * @run main JTableOverlapping
  */
+
 public class JTableOverlapping extends SimpleOverlappingTestBase {
 
     @Override

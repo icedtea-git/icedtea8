@@ -37,6 +37,7 @@ import javax.swing.*;
  * @build Util
  * @run main JTextFieldOverlapping
  */
+
 public class JTextFieldOverlapping extends SimpleOverlappingTestBase {
 
     @Override

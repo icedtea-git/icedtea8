@@ -36,6 +36,7 @@ import javax.swing.*;
  * @build Util
  * @run main JToggleButtonOverlapping
  */
+
 public class JToggleButtonOverlapping extends SimpleOverlappingTestBase {
 
     @Override

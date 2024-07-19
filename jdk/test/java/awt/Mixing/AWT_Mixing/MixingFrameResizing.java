@@ -46,6 +46,7 @@ import test.java.awt.regtesthelpers.Util;
  * @build Util
  * @run main MixingFrameResizing
  */
+
 public class MixingFrameResizing extends OverlappingTestBase {
 
     {testEmbeddedFrame = true;}

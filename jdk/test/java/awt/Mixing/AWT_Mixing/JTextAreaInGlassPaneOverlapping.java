@@ -38,6 +38,7 @@ import javax.swing.*;
  * @build Util
  * @run main JTextAreaInGlassPaneOverlapping
  */
+
 public class JTextAreaInGlassPaneOverlapping extends GlassPaneOverlappingTestBase {
 
     @Override

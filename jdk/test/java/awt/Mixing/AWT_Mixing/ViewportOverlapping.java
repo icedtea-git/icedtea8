@@ -55,6 +55,7 @@ import test.java.awt.regtesthelpers.Util;
  * @build Util
  * @run main ViewportOverlapping
  */
+
 public class ViewportOverlapping extends OverlappingTestBase {
 
     private volatile int frameClicked;

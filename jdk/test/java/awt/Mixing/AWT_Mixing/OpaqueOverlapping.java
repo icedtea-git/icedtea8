@@ -50,6 +50,7 @@ import test.java.awt.regtesthelpers.Util;
  * @build Util
  * @run main OpaqueOverlapping
  */
+
 public class OpaqueOverlapping extends OverlappingTestBase {
 
     {

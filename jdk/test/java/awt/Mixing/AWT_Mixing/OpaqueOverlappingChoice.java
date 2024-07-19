@@ -27,7 +27,7 @@
  *
  * This test case was separated from {@link OpaqueOverlapping} due to CR 6994264 (Choice autohides dropdown on Solaris 10)
  */
-/* 
+/*
  * @test
  * @key headful
  * @bug 6994264
@@ -35,7 +35,8 @@
  * @library ../../regtesthelpers
  * @build Util
  * @run main OpaqueOverlappingChoice
-*/
+ */
+
 public class OpaqueOverlappingChoice extends OpaqueOverlapping  {
     {
         onlyClassName = "Choice";
@@ -48,4 +49,3 @@ public class OpaqueOverlappingChoice extends OpaqueOverlapping  {
         OverlappingTestBase.doMain(args);
     }
 }
-

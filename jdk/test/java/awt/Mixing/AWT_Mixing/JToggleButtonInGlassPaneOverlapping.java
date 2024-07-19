@@ -37,6 +37,7 @@ import javax.swing.*;
  * @build Util
  * @run main JToggleButtonInGlassPaneOverlapping
  */
+
 public class JToggleButtonInGlassPaneOverlapping extends GlassPaneOverlappingTestBase {
 
     @Override
