@@ -4513,7 +4513,7 @@ VS_TOOLSET_SUPPORTED_2022=true
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1716396030
+DATE_WHEN_GENERATED=1729881789
 
 ###############################################################################
 #
@@ -28920,8 +28920,8 @@ $as_echo "$as_me: The result from running it was: \"$COMPILER_VERSION_OUTPUT\"" 
     if test $? -ne 0; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&5
 $as_echo "$as_me: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The result from running with --version was: \"$COMPILER_VERSION\"" >&5
-$as_echo "$as_me: The result from running with --version was: \"$COMPILER_VERSION\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: The result from running with --version was: \"$COMPILER_VERSION_OUTPUT\"" >&5
+$as_echo "$as_me: The result from running with --version was: \"$COMPILER_VERSION_OUTPUT\"" >&6;}
       as_fn_error $? "A $TOOLCHAIN_TYPE compiler is required. Try setting --with-tools-dir." "$LINENO" 5
     fi
     # Remove Copyright and legalese from version string, and
@@ -30659,8 +30659,8 @@ $as_echo "$as_me: The result from running it was: \"$COMPILER_VERSION_OUTPUT\"" 
     if test $? -ne 0; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&5
 $as_echo "$as_me: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: The result from running with --version was: \"$COMPILER_VERSION\"" >&5
-$as_echo "$as_me: The result from running with --version was: \"$COMPILER_VERSION\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: The result from running with --version was: \"$COMPILER_VERSION_OUTPUT\"" >&5
+$as_echo "$as_me: The result from running with --version was: \"$COMPILER_VERSION_OUTPUT\"" >&6;}
       as_fn_error $? "A $TOOLCHAIN_TYPE compiler is required. Try setting --with-tools-dir." "$LINENO" 5
     fi
     # Remove Copyright and legalese from version string, and
@@ -50158,7 +50158,7 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char jpeg_CreateDecompress ();
+char jpeg_CreateDecompress (void);
 int
 main (void)
 {
@@ -50988,9 +50988,9 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char krb5_cc_default ();
+char krb5_cc_default (void);
 int
-main ()
+main (void)
 {
 return krb5_cc_default ();
   ;
@@ -51204,9 +51204,9 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char sctp_bindx ();
+char sctp_bindx (void);
 int
-main ()
+main (void)
 {
 return sctp_bindx ();
   ;
