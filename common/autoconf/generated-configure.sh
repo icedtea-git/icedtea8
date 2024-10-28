@@ -4513,7 +4513,7 @@ VS_TOOLSET_SUPPORTED_2022=true
 #CUSTOM_AUTOCONF_INCLUDE
 
 # Do not change or remove the following line, it is needed for consistency checks:
-DATE_WHEN_GENERATED=1729881789
+DATE_WHEN_GENERATED=1730138425
 
 ###############################################################################
 #
@@ -28916,7 +28916,7 @@ $as_echo "$as_me: The result from running it was: \"$COMPILER_VERSION_OUTPUT\"" 
     #     warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     COMPILER_VERSION_OUTPUT=`$COMPILER --version 2>&1`
     # Check that this is likely to be GCC.
-    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP -E "^(gcc|g\+\+|distcc)" >&5 2>&1
+    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP "Free Software Foundation" >&5 2>&1
     if test $? -ne 0; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&5
 $as_echo "$as_me: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&6;}
@@ -30655,7 +30655,7 @@ $as_echo "$as_me: The result from running it was: \"$COMPILER_VERSION_OUTPUT\"" 
     #     warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     COMPILER_VERSION_OUTPUT=`$COMPILER --version 2>&1`
     # Check that this is likely to be GCC.
-    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP -E "^(gcc|g\+\+|distcc)" >&5 2>&1
+    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP "Free Software Foundation" >&5 2>&1
     if test $? -ne 0; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&5
 $as_echo "$as_me: The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler." >&6;}

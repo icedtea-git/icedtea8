@@ -436,7 +436,7 @@ AC_DEFUN([TOOLCHAIN_EXTRACT_COMPILER_VERSION],
     #     warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     COMPILER_VERSION_OUTPUT=`$COMPILER --version 2>&1`
     # Check that this is likely to be GCC.
-    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP -E "^(gcc|g\+\+|distcc)" >&AS_MESSAGE_LOG_FD 2>&1
+    $ECHO "$COMPILER_VERSION_OUTPUT" | $GREP "Free Software Foundation" >&AS_MESSAGE_LOG_FD 2>&1
     if test $? -ne 0; then
       AC_MSG_NOTICE([The $COMPILER_NAME compiler (located as $COMPILER) does not seem to be the required $TOOLCHAIN_TYPE compiler.])
       AC_MSG_NOTICE([The result from running with --version was: "$COMPILER_VERSION_OUTPUT"])
