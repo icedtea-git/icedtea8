@@ -25,7 +25,7 @@
  * @test
  * @bug 8255466
  * @summary unsafe access to static field causes crash
- *
+ * @library /testlibrary
  * @run main/othervm -Xcomp -XX:CompileCommand=compileonly,TestUnsafeStaticFieldAccess::* TestUnsafeStaticFieldAccess
  *
  */
