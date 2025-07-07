@@ -679,7 +679,7 @@ jobs:
 
   windows_x64_build:
     name: Windows x64
-    runs-on: "windows-2019"
+    runs-on: "windows-2025"
     needs: prerequisites
     if: needs.prerequisites.outputs.should_run != 'false' && needs.prerequisites.outputs.platform_windows_x64 != 'false'
 
@@ -857,7 +857,7 @@ jobs:
 
   windows_x86_build:
     name: Windows x86
-    runs-on: "windows-2019"
+    runs-on: "windows-2025"
     needs: prerequisites
     if: needs.prerequisites.outputs.should_run != 'false' && needs.prerequisites.outputs.platform_windows_x86 != 'false'
 
@@ -1031,7 +1031,7 @@ jobs:
 
   windows_x64_test:
     name: Windows x64
-    runs-on: "windows-2019"
+    runs-on: "windows-2025"
     needs:
       - prerequisites
       - windows_x64_build
@@ -1192,7 +1192,7 @@ jobs:
 
   windows_x86_test:
     name: Windows x86
-    runs-on: "windows-2019"
+    runs-on: "windows-2025"
     needs:
       - prerequisites
       - windows_x86_build
