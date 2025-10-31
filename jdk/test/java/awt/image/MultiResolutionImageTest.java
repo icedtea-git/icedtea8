@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,9 @@ import jdk.testlibrary.Platform;
 import java.awt.image.MultiResolutionImage;
 
 /**
- * @test @bug 8011059
+ * @test
+ * @bug 8011059
+ * @key headful
  * @author Alexander Scherbatiy
  * @summary [macosx] Make JDK demos look perfect on retina displays
  * @library /lib/testlibrary/
@@ -50,6 +52,7 @@ import java.awt.image.MultiResolutionImage;
  * @run main MultiResolutionImageTest TOOLKIT_LOAD
  * @run main MultiResolutionImageTest TOOLKIT
  */
+
 public class MultiResolutionImageTest {
 
     private static final int IMAGE_WIDTH = 300;
